@@ -16,6 +16,14 @@
 
 ////////////////////////////////////////////////////////////////////////// MYAPP
 
+typedef struct CameraData {
+    glm::mat4 ViewMatrix;
+    glm::mat4 ProjectionMatrix;
+    glm::quat currentRot = glm::quat(1, 0, 0, 0);
+    glm::quat targetRot = glm::quat(1, 0, 0, 0);
+    float orbitRadius = 15.0f;
+} CameraData;
+
 class MyApp : public mgl::App {
 public:
   void initCallback(GLFWwindow *win) override;
@@ -29,7 +37,9 @@ public:
 private:
     const GLuint UBO_BP = 0;
     mgl::ShaderProgram* Shaders = nullptr;
-    mgl::Camera* Camera = nullptr;
+	mgl::Camera* Camera = nullptr;
+	std::vector<CameraData> Cameras;
+    int currentCamera = 0;
     GLint ModelMatrixId;
     mgl::Mesh* Mesh = nullptr;
 
@@ -40,11 +50,7 @@ private:
   double lastMouseY = 0.0f;
   float mouseSensitivity = 0.1f;
 
-
-  glm::quat currentRot = glm::quat(1, 0, 0, 0);
-  glm::quat targetRot = glm::quat(1, 0, 0, 0);
-
-  float orbitRadius = 15.0f;
+  
   float yawSpeed = 1.0f;
   float pitchSpeed = 1.0f;
 
@@ -52,7 +58,7 @@ private:
   void createShaderPrograms();
   void createCamera();
   void drawScene();
-  glm::vec3 updateOrbit(double elapsed);
+  void updateOrbit();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
@@ -112,13 +118,13 @@ const glm::mat4 ModelMatrix =
 
 // Eye(5,5,5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(-5.0f, -5.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::lookAt(glm::vec3(0.0f, 15.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 0.0f, -1.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10)
 const glm::mat4 ProjectionMatrix1 =
@@ -129,47 +135,39 @@ const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 4.0f/3.0f, 0.1f, 100.0f);
 
 void MyApp::createCamera() {
+	CameraData camera;
+	camera.ViewMatrix = ViewMatrix1;
+	camera.ProjectionMatrix = ProjectionMatrix2;
+	Cameras.push_back(camera);
+
+	CameraData camera2;
+	camera2.ProjectionMatrix = ProjectionMatrix2;
+	camera2.ViewMatrix = ViewMatrix2;
+	Cameras.push_back(camera2);
+
     Camera = new mgl::Camera(UBO_BP);
-    Camera->setViewMatrix(ViewMatrix1);
-    Camera->setProjectionMatrix(ProjectionMatrix2);
+    Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
+	Camera->setProjectionMatrix(Cameras[currentCamera].ProjectionMatrix);
 }
 
 void MyApp::drawScene() {
+    updateOrbit();
     Shaders->bind();
     glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrix));
     Mesh->draw();
     Shaders->unbind();
 }
 
-glm::vec3 MyApp::updateOrbit(double elapsed) {
-	float dt = static_cast<float>(elapsed);
+void MyApp::updateOrbit() {
+	Cameras[currentCamera].currentRot = glm::slerp(Cameras[currentCamera].currentRot, Cameras[currentCamera].targetRot, 0.1f);
+    Cameras[currentCamera].ViewMatrix = glm::lookAt(
+        Cameras[currentCamera].currentRot * glm::vec3(0.0f, 0.0f, Cameras[currentCamera].orbitRadius),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        Cameras[currentCamera].currentRot * glm::vec3(0.0f, 1.0f, 0.0f)
+	);
 
-	// keyboard input for orbit control. Only here for debug, remove later.
-    /*
-    if (keys[GLFW_KEY_LEFT]) {
-		glm::quat q = glm::angleAxis(-yawSpeed * dt, glm::vec3(0.0f, 1.0f, 0.0f));
-		targetRot = q * targetRot;
-    }
-    if (keys[GLFW_KEY_RIGHT]) {
-		glm::quat q = glm::angleAxis(yawSpeed * dt, glm::vec3(0.0f, 1.0f, 0.0f));
-		targetRot = q * targetRot;
-    }
-	if (keys[GLFW_KEY_UP]) {
-		glm::vec3 localRight = currentRot * glm::vec3(1.0f, 0.0f, 0.0f);
-		glm::quat q = glm::angleAxis(-pitchSpeed * dt, localRight);
-		targetRot = q * targetRot;
-	}
-	if (keys[GLFW_KEY_DOWN]) {
-		glm::vec3 localRight = currentRot * glm::vec3(1.0f, 0.0f, 0.0f);
-		glm::quat q = glm::angleAxis(pitchSpeed * dt, localRight);
-		targetRot = q * targetRot;
-	}
-    */
-    currentRot = glm::slerp(currentRot, targetRot, 0.1f);
-	glm::vec3 base(0.0f, 0.0f, orbitRadius);
+	Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
 
-	
-    return currentRot * base;
 }
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
@@ -202,14 +200,6 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
 }
 
 void MyApp::displayCallback(GLFWwindow *win, double elapsed) { 
-	
-	glm::vec3 eye = updateOrbit(elapsed);
-	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 up = currentRot * glm::vec3(0.0f, 1.0f, 0.0f);
-
-	glm::mat4 viewMatrix = glm::lookAt(eye, center, up);
-	Camera->setViewMatrix(viewMatrix);
-    
     drawScene(); 
 }
 
@@ -218,6 +208,9 @@ void MyApp::keyCallback(GLFWwindow *win, int key, int scancode, int action, int 
 
     if (action == GLFW_PRESS) {
         app->keys[key] = true;
+        if (key == GLFW_KEY_C) {
+			app->currentCamera = (app->currentCamera + 1) % app->Cameras.size();
+        }
     }
     else if (action == GLFW_RELEASE) {
         app->keys[key] = false;
@@ -245,23 +238,23 @@ void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
         dy *= mouseSensitivity;
 
         glm::quat qYaw = glm::angleAxis(glm::radians(-dx), glm::vec3(0.0f, 1.0f, 0.0f));
-		targetRot = qYaw * targetRot;
-        glm::vec3 localUp = targetRot * glm::vec3(1.0f, 0.0f, 0.0f);
+		Cameras[currentCamera].targetRot = qYaw * Cameras[currentCamera].targetRot;
+        glm::vec3 localUp = Cameras[currentCamera].targetRot * glm::vec3(1.0f, 0.0f, 0.0f);
         glm::quat qPitch = glm::angleAxis(glm::radians(dy), localUp);
 
-        targetRot = qPitch * targetRot;
+        Cameras[currentCamera].targetRot = qPitch * Cameras[currentCamera].targetRot;
         lastMouseX = xpos;
         lastMouseY = ypos;
     }
 }
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
-    orbitRadius -= static_cast<float>(yoffset);
-    if (orbitRadius < 2.0f) {
-        orbitRadius = 2.0f;
+    Cameras[currentCamera].orbitRadius -= static_cast<float>(yoffset);
+    if (Cameras[currentCamera].orbitRadius < 2.0f) {
+        Cameras[currentCamera].orbitRadius = 2.0f;
     }
-    if (orbitRadius > 50.0f) {
-        orbitRadius = 50.0f;
+    if (Cameras[currentCamera].orbitRadius > 50.0f) {
+        Cameras[currentCamera].orbitRadius = 50.0f;
 	}
 }
 
