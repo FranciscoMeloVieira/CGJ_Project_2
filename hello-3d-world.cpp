@@ -211,6 +211,12 @@ void MyApp::initCallback(GLFWwindow *win) {
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   glViewport(0, 0, winx, winy);
+  float aspect = static_cast<float>(winx) / static_cast<float>(winy);
+  Cameras[0].PerspectiveMatrix =
+      glm::perspective(glm::radians(30.0f), aspect, 0.1f, 100.0f);
+  Cameras[1].PerspectiveMatrix =
+      glm::perspective(glm::radians(30.0f), aspect, 0.1f, 100.0f);
+  updateCamera();
 }
 
 void MyApp::displayCallback(GLFWwindow *win, double elapsed) { 
