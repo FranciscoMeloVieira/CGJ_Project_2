@@ -19,8 +19,8 @@
 typedef struct CameraData {
     glm::mat4 ViewMatrix;
     glm::mat4 ProjectionMatrix;
-    glm::quat currentRot = glm::quat(1, 0, 0, 0);
-    glm::quat targetRot = glm::quat(1, 0, 0, 0);
+    glm::quat currentRot;
+    glm::quat targetRot;
     float orbitRadius = 15.0f;
 } CameraData;
 
@@ -138,11 +138,15 @@ void MyApp::createCamera() {
 	CameraData camera;
 	camera.ViewMatrix = ViewMatrix1;
 	camera.ProjectionMatrix = ProjectionMatrix2;
+	camera.currentRot = glm::quat(1,0,0,0);
+	camera.targetRot = glm::quat(1,0,0,0);
 	Cameras.push_back(camera);
 
 	CameraData camera2;
 	camera2.ProjectionMatrix = ProjectionMatrix2;
 	camera2.ViewMatrix = ViewMatrix2;
+	camera2.currentRot = glm::quat(-0.707106f, 0, 0, 0.707106f);
+	camera2.targetRot = glm::quat(-0.707106f, 0, 0, 0.707106f);
 	Cameras.push_back(camera2);
 
     Camera = new mgl::Camera(UBO_BP);
@@ -151,7 +155,6 @@ void MyApp::createCamera() {
 }
 
 void MyApp::drawScene() {
-    updateOrbit();
     Shaders->bind();
     glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrix));
     Mesh->draw();
@@ -167,6 +170,7 @@ void MyApp::updateOrbit() {
 	);
 
 	Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
+	drawScene();
 
 }
 
@@ -204,16 +208,17 @@ void MyApp::displayCallback(GLFWwindow *win, double elapsed) {
 }
 
 void MyApp::keyCallback(GLFWwindow *win, int key, int scancode, int action, int mods) {
-	MyApp* app = static_cast<MyApp*>(mgl::Engine::getInstance().getApp());
 
     if (action == GLFW_PRESS) {
-        app->keys[key] = true;
+        keys[key] = true;
         if (key == GLFW_KEY_C) {
-			app->currentCamera = (app->currentCamera + 1) % app->Cameras.size();
+			currentCamera = (currentCamera + 1) % Cameras.size();
+			Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
+			drawScene();
         }
     }
     else if (action == GLFW_RELEASE) {
-        app->keys[key] = false;
+        keys[key] = false;
 	}
 }
 
@@ -245,6 +250,8 @@ void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
         Cameras[currentCamera].targetRot = qPitch * Cameras[currentCamera].targetRot;
         lastMouseX = xpos;
         lastMouseY = ypos;
+
+		updateOrbit();
     }
 }
 
@@ -256,6 +263,7 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
     if (Cameras[currentCamera].orbitRadius > 50.0f) {
         Cameras[currentCamera].orbitRadius = 50.0f;
 	}
+	    updateOrbit();
 }
 
 /////////////////////////////////////////////////////////////////////////// MAIN
