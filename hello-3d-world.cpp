@@ -145,8 +145,8 @@ void MyApp::createCamera() {
 	CameraData camera2;
 	camera2.ProjectionMatrix = ProjectionMatrix2;
 	camera2.ViewMatrix = ViewMatrix2;
-	camera2.currentRot = glm::quat(-0.707106f, 0, 0, 0.707106f);
-	camera2.targetRot = glm::quat(-0.707106f, 0, 0, 0.707106f);
+	camera2.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+	camera2.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
 	Cameras.push_back(camera2);
 
     Camera = new mgl::Camera(UBO_BP);
