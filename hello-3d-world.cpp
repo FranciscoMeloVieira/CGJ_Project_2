@@ -244,10 +244,11 @@ void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
         dy *= mouseSensitivity;
 
         glm::quat qYaw = glm::angleAxis(glm::radians(-dx), glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::vec3 localRight = currentRot * glm::vec3(1.0f, 0.0f, 0.0f);
-        glm::quat qPitch = glm::angleAxis(glm::radians(dy), localRight);
+		targetRot = qYaw * targetRot;
+        glm::vec3 localUp = targetRot * glm::vec3(1.0f, 0.0f, 0.0f);
+        glm::quat qPitch = glm::angleAxis(glm::radians(dy), localUp);
 
-        targetRot = qYaw * qPitch * targetRot;
+        targetRot = qPitch * targetRot;
         lastMouseX = xpos;
         lastMouseY = ypos;
     }
