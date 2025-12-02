@@ -30,6 +30,9 @@
     <ClCompile Include="Libraries\mgl\mglShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Libraries\mgl\mglMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Libraries\mgl\mglScenegraph.hpp">

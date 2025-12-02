@@ -102,17 +102,19 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glfw\include;$(SolutionDir)libraries\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)libraries\glm;$(SolutionDir)libraries\glfw\include;$(SolutionDir)libraries\glew\include;%(AdditionalIncludeDirectories);$(SolutionDir)libraries\assimp\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)libraries\glfw\lib-vc2022;$(SolutionDir)libraries\glew\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)libraries\assimp\lib\x64;$(SolutionDir)libraries\glfw\lib-vc2022;$(SolutionDir)libraries\glew\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;glfw3dll.lib;%(AdditionalDependencies);assimp-vc143-mt.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y "$(SolutionDir)libraries\glew\bin\Release\x64\glew32.dll" "$(OutDir)"
-xcopy /y "$(SolutionDir)libraries\glfw\lib-vc2022\glfw3.dll" "$(OutDir)"</Command>
+xcopy /y  "$(SolutionDir)libraries\assimp\bin\x64\assimp-vc143-mt.dll" "$(OutDir)"
+xcopy /y "$(SolutionDir)libraries\glfw\lib-vc2022\glfw3.dll" "$(OutDir)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -123,17 +125,26 @@ xcopy /y "$(SolutionDir)libraries\glfw\lib-vc2022\glfw3.dll" "$(OutDir)"</Comman
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>;$(SolutionDir)libraries\assimp\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)libraries\assimp\lib\x64;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);assimp-vc124-mt.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>&lt;different options&gt;
+xcopy /y  "$(SolutionDir)\libraries\assimp\bin\x64\assimp-vc143-mt.dll" "$(OutDir)"
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="hello-3d-world.cpp" />
     <ClCompile Include="Libraries\mgl\mglApp.cpp" />
     <ClCompile Include="Libraries\mgl\mglCamera.cpp" />
     <ClCompile Include="Libraries\mgl\mglError.cpp" />
+    <ClCompile Include="Libraries\mgl\mglMesh.cpp" />
     <ClCompile Include="Libraries\mgl\mglShader.cpp" />
   </ItemGroup>
   <ItemGroup>
