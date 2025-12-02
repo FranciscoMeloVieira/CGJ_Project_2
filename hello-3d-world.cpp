@@ -33,7 +33,7 @@ public:
   void windowSizeCallback(GLFWwindow *win, int width, int height) override;
   void keyCallback(GLFWwindow *win, int key, int scancode, int action, int mods) override;
   void mouseButtonCallback(GLFWwindow *win, int button, int action, int mods) override;
-  void cursorPosCallback(GLFWwindow* win, double xpos, double ypos);
+  void cursorCallback(GLFWwindow* win, double xpos, double ypos) override;
   void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) override;
 
 private:
@@ -190,23 +190,6 @@ void MyApp::initCallback(GLFWwindow *win) {
   createMeshes();
   createShaderPrograms();
   createCamera();
-  glfwSetWindowUserPointer(win, this);
-  glfwSetKeyCallback(win, [](GLFWwindow* win, int key, int scancode, int action, int mods) {
-      MyApp* app = static_cast<MyApp*>(glfwGetWindowUserPointer(win));
-      if (app) {
-          app->keyCallback(win, key, scancode, action, mods);
-      }
-      });
-  glfwSetMouseButtonCallback(win, [](GLFWwindow* win, int button, int action, int mods) {
-      MyApp* app = static_cast<MyApp*>(glfwGetWindowUserPointer(win));
-      if (app) app->mouseButtonCallback(win, button, action, mods);
-      });
-
-  glfwSetCursorPosCallback(win, [](GLFWwindow* win, double xpos, double ypos) {
-      MyApp* app = static_cast<MyApp*>(glfwGetWindowUserPointer(win));
-      if (app) app->cursorPosCallback(win, xpos, ypos);
-      });
-
 }
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
@@ -258,7 +241,7 @@ void MyApp::mouseButtonCallback(GLFWwindow *win, int button, int action, int mod
     }
 }
 
-void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
+void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
     if (rightMouseDown) {
         float dx = static_cast<float>(xpos - lastMouseX);
         float dy = static_cast<float>(lastMouseY - ypos);
