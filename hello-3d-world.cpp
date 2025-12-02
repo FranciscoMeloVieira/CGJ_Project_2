@@ -18,7 +18,9 @@
 
 typedef struct CameraData {
     glm::mat4 ViewMatrix;
-    glm::mat4 ProjectionMatrix;
+    glm::mat4 PerspectiveMatrix;
+    glm::mat4 OrthoProjectionMatrix;
+	bool isPerspective = true;
     glm::quat currentRot;
     glm::quat targetRot;
     float orbitRadius = 15.0f;
@@ -58,7 +60,7 @@ private:
   void createShaderPrograms();
   void createCamera();
   void drawScene();
-  void updateOrbit();
+  void updateCamera();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
@@ -116,42 +118,41 @@ void MyApp::createShaderPrograms() {
 const glm::mat4 ModelMatrix =
     glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
 
-// Eye(5,5,5) Center(0,0,0) Up(0,1,0)
+// Eye(0,0,15) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
     glm::lookAt(glm::vec3(0.0f, 0.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
+// Eye(0,15,0) Center(0,0,0) Up(0,0,-1)
 const glm::mat4 ViewMatrix2 =
     glm::lookAt(glm::vec3(0.0f, 15.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, -1.0f));
 
-// Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10)
+// Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,100)
 const glm::mat4 ProjectionMatrix1 =
     glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 5.0f, 100.0f);
 
-// Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(10)
+// Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(100)
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 4.0f/3.0f, 0.1f, 100.0f);
 
 void MyApp::createCamera() {
 	CameraData camera;
 	camera.ViewMatrix = ViewMatrix1;
-	camera.ProjectionMatrix = ProjectionMatrix2;
+	camera.PerspectiveMatrix = ProjectionMatrix2;
+	camera.OrthoProjectionMatrix = ProjectionMatrix1;
 	camera.currentRot = glm::quat(1,0,0,0);
 	camera.targetRot = glm::quat(1,0,0,0);
 	Cameras.push_back(camera);
 
-	CameraData camera2;
-	camera2.ProjectionMatrix = ProjectionMatrix2;
-	camera2.ViewMatrix = ViewMatrix2;
-	camera2.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-	camera2.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-	Cameras.push_back(camera2);
+	camera.ViewMatrix = ViewMatrix2;
+	camera.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+	camera.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+	Cameras.push_back(camera);
 
     Camera = new mgl::Camera(UBO_BP);
     Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
-	Camera->setProjectionMatrix(Cameras[currentCamera].ProjectionMatrix);
+	Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
 }
 
 void MyApp::drawScene() {
@@ -161,17 +162,26 @@ void MyApp::drawScene() {
     Shaders->unbind();
 }
 
-void MyApp::updateOrbit() {
+void MyApp::updateCamera() {
+	// Projection matrix update
+    if (Cameras[currentCamera].isPerspective) {
+        Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
+    }
+    else {
+        Camera->setProjectionMatrix(Cameras[currentCamera].OrthoProjectionMatrix);
+	}
+
+	// View matrix update
 	Cameras[currentCamera].currentRot = glm::slerp(Cameras[currentCamera].currentRot, Cameras[currentCamera].targetRot, 0.1f);
     Cameras[currentCamera].ViewMatrix = glm::lookAt(
         Cameras[currentCamera].currentRot * glm::vec3(0.0f, 0.0f, Cameras[currentCamera].orbitRadius),
         glm::vec3(0.0f, 0.0f, 0.0f),
         Cameras[currentCamera].currentRot * glm::vec3(0.0f, 1.0f, 0.0f)
 	);
-
 	Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
-	drawScene();
 
+	// Redraw scene
+	drawScene();
 }
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
@@ -214,12 +224,20 @@ void MyApp::keyCallback(GLFWwindow *win, int key, int scancode, int action, int 
         if (key == GLFW_KEY_C) {
 			currentCamera = (currentCamera + 1) % Cameras.size();
 			Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
-			drawScene();
+        }
+        if (key == GLFW_KEY_P) {
+            if (Cameras[currentCamera].isPerspective) {
+                Cameras[currentCamera].isPerspective = false;
+            }
+            else {
+                Cameras[currentCamera].isPerspective = true;
+			}
         }
     }
     else if (action == GLFW_RELEASE) {
         keys[key] = false;
 	}
+	updateCamera();
 }
 
 void MyApp::mouseButtonCallback(GLFWwindow *win, int button, int action, int mods) {
@@ -251,7 +269,7 @@ void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
         lastMouseX = xpos;
         lastMouseY = ypos;
 
-		updateOrbit();
+		updateCamera();
     }
 }
 
@@ -263,7 +281,7 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
     if (Cameras[currentCamera].orbitRadius > 50.0f) {
         Cameras[currentCamera].orbitRadius = 50.0f;
 	}
-	    updateOrbit();
+	    updateCamera();
 }
 
 /////////////////////////////////////////////////////////////////////////// MAIN
