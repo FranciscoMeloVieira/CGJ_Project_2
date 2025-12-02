@@ -24,6 +24,7 @@ public:
   void keyCallback(GLFWwindow *win, int key, int scancode, int action, int mods) override;
   void mouseButtonCallback(GLFWwindow *win, int button, int action, int mods) override;
   void cursorPosCallback(GLFWwindow* win, double xpos, double ypos);
+  void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) override;
 
 private:
     const GLuint UBO_BP = 0;
@@ -252,6 +253,16 @@ void MyApp::cursorPosCallback(GLFWwindow* win, double xpos, double ypos) {
         lastMouseX = xpos;
         lastMouseY = ypos;
     }
+}
+
+void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
+    orbitRadius -= static_cast<float>(yoffset);
+    if (orbitRadius < 2.0f) {
+        orbitRadius = 2.0f;
+    }
+    if (orbitRadius > 50.0f) {
+        orbitRadius = 50.0f;
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////// MAIN
