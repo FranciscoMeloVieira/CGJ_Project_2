@@ -29,6 +29,11 @@ vec3 diffuseColor(void) {
     float intensity = max(dot(direction, N), 0.0);
     return vec3(intensity);
 }
+vec3 normalShadeColor(void) {
+    vec3 N = normalize(exNormal);
+    float shade = 0.4 + 0.5 * abs(N.x + N.y + N.z);
+    return vec3(exColor.x, exColor.y, exColor.z) * shade;
+}
 
 void main(void)
 {
@@ -36,7 +41,8 @@ void main(void)
     // color = constantColor();
     // color = positionColor();
     // color = uvColor();
-    color = normalColor();
+    // color = normalColor();
     // color = diffuseColor();
-    FragmentColor = exColor;
+    color = normalShadeColor();
+    FragmentColor = vec4(color, 1.0);
 }

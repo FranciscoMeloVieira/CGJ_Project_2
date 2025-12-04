@@ -175,7 +175,7 @@ glm::lookAt(glm::vec3(0.0f, 25.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,100)
 const glm::mat4 ProjectionMatrix1 =
-glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 100.0f);
+glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 1.0f, 100.0f);
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(100)
 const glm::mat4 ProjectionMatrix2 =
