@@ -3,6 +3,7 @@
 in vec3 exPosition;
 in vec2 exTexcoord;
 in vec3 exNormal;
+in vec4 exColor;
 
 out vec4 FragmentColor;
 
@@ -37,5 +38,5 @@ void main(void)
     // color = uvColor();
     color = normalColor();
     // color = diffuseColor();
-    FragmentColor = vec4(color, 1.0);
+    FragmentColor = exColor;
 }

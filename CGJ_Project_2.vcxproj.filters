@@ -33,10 +33,24 @@
     <ClCompile Include="Libraries\mgl\mglMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ScenegraphNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Libraries\mgl\mglScenegraph.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ScenegraphNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cube-fs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cube-vs.glsl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

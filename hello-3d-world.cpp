@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "../mgl/mgl.hpp"
+#include "ScenegraphNode.h"
 
 ////////////////////////////////////////////////////////////////////////// MYAPP
 
@@ -37,13 +38,14 @@ public:
   void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) override;
 
 private:
-    const GLuint UBO_BP = 0;
+    const GLuint UBO_BP = 0, COLOR = 5;
     mgl::ShaderProgram* Shaders = nullptr;
 	mgl::Camera* Camera = nullptr;
 	std::vector<CameraData> Cameras;
     int currentCamera = 0;
-    GLint ModelMatrixId;
+    GLint ModelMatrixId, ColorId;
     mgl::Mesh* Mesh = nullptr;
+	ScenegraphNode* Root = nullptr;
 
   bool keys[1024]{ false };
   bool rightMouseDown = false;
@@ -61,26 +63,13 @@ private:
   void createCamera();
   void drawScene();
   void updateCamera();
+  void createScenegraph();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
 
 void MyApp::createMeshes() {
     std::string mesh_dir = "./shapes/";
-    // std::string mesh_file = "cube-v.obj";
-    // std::string mesh_file = "cube-vn-flat.obj";
-    // std::string mesh_file = "cube-vn-smooth.obj";
-    // std::string mesh_file = "cube-vt.obj";
-    // std::string mesh_file = "cube-vt2.obj";
-    // std::string mesh_file = "torus-vtn-flat.obj";
-    // std::string mesh_file = "torus-vtn-smooth.obj";
-    // std::string mesh_file = "suzanne-vtn-flat.obj";
-    // std::string mesh_file = "suzanne-vtn-smooth.obj";
-    // std::string mesh_file = "teapot-vn-flat.obj";
-    // std::string mesh_file = "teapot-vn-smooth.obj";
-    //std::string mesh_file = "bunny-vn-flat.obj";
-    // std::string mesh_file = "bunny-vn-smooth.obj";
-    //std::string mesh_file = "monkey-torus-vtn-flat.obj";
     std::string mesh_file = "Shape1_2_BigTriangle.obj";
     std::string mesh_fullname = mesh_dir + mesh_file;
 
@@ -108,10 +97,12 @@ void MyApp::createShaderPrograms() {
     }
 
     Shaders->addUniform(mgl::MODEL_MATRIX);
+	Shaders->addUniform(mgl::COLOR_ATTRIBUTE);
     Shaders->addUniformBlock(mgl::CAMERA_BLOCK, UBO_BP);
     Shaders->create();
 
     ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;
+	ColorId = Shaders->Uniforms[mgl::COLOR_ATTRIBUTE].index;
 }
 
 ////////////////////////////////////////////////////////////////////////// SCENE
@@ -157,10 +148,7 @@ void MyApp::createCamera() {
 }
 
 void MyApp::drawScene() {
-    Shaders->bind();
-    glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrix));
-    Mesh->draw();
-    Shaders->unbind();
+	Root->draw();
 }
 
 void MyApp::updateCamera() {
@@ -185,12 +173,17 @@ void MyApp::updateCamera() {
 	drawScene();
 }
 
+void MyApp::createScenegraph() {
+	Root = new ScenegraphNode(Mesh, Shaders, ModelMatrix, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+}
+
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
 void MyApp::initCallback(GLFWwindow *win) {
   createMeshes();
   createShaderPrograms();
   createCamera();
+  createScenegraph();
 }
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
