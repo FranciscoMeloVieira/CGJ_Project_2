@@ -6,21 +6,23 @@ void ScenegraphNode::addChild(ScenegraphNode* child) {
 }
 
 void ScenegraphNode::draw() {
-	// Compute global transform
-	glm::mat4 globalTransform = localTransform;
-	ScenegraphNode* p = parent;
-	while (p != nullptr) {
-		globalTransform = p->localTransform * globalTransform;
-		p = p->parent;
-	}
+	if (!(Shaders == nullptr || Mesh == nullptr)) {
+		// Compute global transform
+		glm::mat4 globalTransform = localTransform;
+		ScenegraphNode* p = parent;
+		while (p != nullptr) {
+			globalTransform = p->localTransform * globalTransform;
+			p = p->parent;
+		}
 
-	Shaders->bind();
-	GLint ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;
-	GLint ColorId = Shaders->Uniforms[mgl::COLOR_ATTRIBUTE].index;
-	glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(globalTransform));
-	glUniform4fv(ColorId, 1, glm::value_ptr(color));
-	if (Mesh != nullptr) Mesh->draw();
-	Shaders->unbind();
+		Shaders->bind();
+		GLint ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;
+		GLint ColorId = Shaders->Uniforms[mgl::COLOR_ATTRIBUTE].index;
+		glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(globalTransform));
+		glUniform4fv(ColorId, 1, glm::value_ptr(color));
+		if (Mesh != nullptr) Mesh->draw();
+		Shaders->unbind();
+	}
 
 	// Draw children
 	for (auto& child : children) {

@@ -11,6 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <memory>
+#include <unordered_map>
+#include <iostream>
 
 #include "../mgl/mgl.hpp"
 #include "ScenegraphNode.h"
@@ -21,66 +23,71 @@ typedef struct CameraData {
     glm::mat4 ViewMatrix;
     glm::mat4 PerspectiveMatrix;
     glm::mat4 OrthoProjectionMatrix;
-	bool isPerspective = true;
+    bool isPerspective = true;
     glm::quat currentRot;
     glm::quat targetRot;
-    float orbitRadius = 50.0f;
+    float orbitRadius = 25.0f;
 } CameraData;
 
 class MyApp : public mgl::App {
 public:
-  void initCallback(GLFWwindow *win) override;
-  void displayCallback(GLFWwindow *win, double elapsed) override;
-  void windowSizeCallback(GLFWwindow *win, int width, int height) override;
-  void keyCallback(GLFWwindow *win, int key, int scancode, int action, int mods) override;
-  void mouseButtonCallback(GLFWwindow *win, int button, int action, int mods) override;
-  void cursorCallback(GLFWwindow* win, double xpos, double ypos) override;
-  void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) override;
+    void initCallback(GLFWwindow* win) override;
+    void displayCallback(GLFWwindow* win, double elapsed) override;
+    void windowSizeCallback(GLFWwindow* win, int width, int height) override;
+    void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) override;
+    void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) override;
+    void cursorCallback(GLFWwindow* win, double xpos, double ypos) override;
+    void scrollCallback(GLFWwindow* win, double xoffset, double yoffset) override;
 
 private:
     const GLuint UBO_BP = 0, COLOR = 5;
     mgl::ShaderProgram* Shaders = nullptr;
-	mgl::Camera* Camera = nullptr;
-	std::vector<CameraData> Cameras;
+    mgl::Camera* Camera = nullptr;
+    std::vector<CameraData> Cameras;
     int currentCamera = 0;
     GLint ModelMatrixId, ColorId;
-    mgl::Mesh* Mesh = nullptr;
-	ScenegraphNode* Root = nullptr;
+    std::unordered_map<std::string, std::shared_ptr<mgl::Mesh>> Meshes;
+    ScenegraphNode* Root = nullptr;
 
-  bool keys[1024]{ false };
-  bool rightMouseDown = false;
+    bool keys[1024]{ false };
+    bool rightMouseDown = false;
 
-  double lastMouseX = 0.0f;
-  double lastMouseY = 0.0f;
-  float mouseSensitivity = 0.1f;
+    double lastMouseX = 0.0f;
+    double lastMouseY = 0.0f;
+    float mouseSensitivity = 0.1f;
 
-  
-  float yawSpeed = 1.0f;
-  float pitchSpeed = 1.0f;
 
-  void createMeshes();
-  void createShaderPrograms();
-  void createCamera();
-  void drawScene();
-  void updateCamera();
-  void createScenegraph();
+    float yawSpeed = 1.0f;
+    float pitchSpeed = 1.0f;
+
+    void createMeshes();
+    mgl::ShaderProgram* createShaderPrograms(mgl::Mesh* Mesh);
+    void createCamera();
+    void drawScene();
+    void updateCamera();
+    void createScenegraph();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
 
 void MyApp::createMeshes() {
     std::string mesh_dir = "./shapes/";
-    std::string mesh_file = "Shape1_2_BigTriangle.obj";
-    std::string mesh_fullname = mesh_dir + mesh_file;
+    std::vector<std::string> mesh_files = {
+        "BigTriangle.obj", "Parallelogram.obj", "TallSmallTriangle.obj",
+        "Square.obj", "ShortSmallTriangle.obj", "MediumTriangle.obj"
+    };
 
-    Mesh = new mgl::Mesh();
-    Mesh->joinIdenticalVertices();
-    Mesh->create(mesh_fullname);
+    for (const auto& file : mesh_files) {
+        std::shared_ptr<mgl::Mesh> mesh = std::make_shared<mgl::Mesh>();
+		mesh->joinIdenticalVertices();
+        mesh->create(mesh_dir + file);
+		Meshes.insert({ file.substr(0, file.find_last_of('.')), mesh });
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
 
-void MyApp::createShaderPrograms() {
+mgl::ShaderProgram* MyApp::createShaderPrograms(mgl::Mesh* Mesh) {
     Shaders = new mgl::ShaderProgram();
     Shaders->addShader(GL_VERTEX_SHADER, "cube-vs.glsl");
     Shaders->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
@@ -97,116 +104,159 @@ void MyApp::createShaderPrograms() {
     }
 
     Shaders->addUniform(mgl::MODEL_MATRIX);
-	Shaders->addUniform(mgl::COLOR_ATTRIBUTE);
+    Shaders->addUniform(mgl::COLOR_ATTRIBUTE);
     Shaders->addUniformBlock(mgl::CAMERA_BLOCK, UBO_BP);
     Shaders->create();
 
     ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;
-	ColorId = Shaders->Uniforms[mgl::COLOR_ATTRIBUTE].index;
+    ColorId = Shaders->Uniforms[mgl::COLOR_ATTRIBUTE].index;
+
+    return Shaders;
 }
+
+///////////////////////////////////////////////////////////////////////// SCENEGRAPH
+
+const glm::mat4 I = glm::mat4(1.0f);
+
+void MyApp::createScenegraph() {
+	Root = new ScenegraphNode(nullptr, nullptr, I, glm::vec4(1.0f));
+    ScenegraphNode* largeTriangle1 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
+                                createShaderPrograms(Meshes.at("BigTriangle").get()), 
+                                I, 
+                                glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
+	Root->addChild(largeTriangle1);
+	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(), 
+                                                        createShaderPrograms(Meshes.at("Parallelogram").get()), 
+                                                        I, 
+                                                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+	Root->addChild(parallelogram);
+    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(), 
+                                                            createShaderPrograms(Meshes.at("TallSmallTriangle").get()), 
+                                                            I, 
+		                                                    glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	parallelogram->addChild(tallSmallTriangle);
+    ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(), 
+                                                createShaderPrograms(Meshes.at("Square").get()), 
+                                                I, 
+		glm::vec4(0.0f, 0.7f, 0.0f, 1.0f));
+    parallelogram->addChild(square);
+    ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(), 
+                                                            createShaderPrograms(Meshes.at("ShortSmallTriangle").get()), 
+                                                            I, 
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    square->addChild(shortSmallTriangle);
+    ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(), 
+                                                        createShaderPrograms(Meshes.at("MediumTriangle").get()), 
+		I,
+        glm::vec4(0.5f, 0.0f, 0.5f, 1.0f));
+	square->addChild(mediumTriangle);
+    ScenegraphNode* largeTriangle = new ScenegraphNode(Meshes.at("BigTriangle").get(), 
+		createShaderPrograms(Meshes.at("BigTriangle").get()),
+		I * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))),
+		glm::vec4(0.3f, 0.6f, 1.0f, 1.0f));
+	mediumTriangle->addChild(largeTriangle);
+
+}
+
 
 ////////////////////////////////////////////////////////////////////////// SCENE
 
-const glm::mat4 ModelMatrix =
-    glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
 
-// Eye(0,0,50) Center(0,0,0) Up(0,1,0)
+
+// Eye(0,0,25) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(0.0f, 0.0f, 50.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f));
+glm::lookAt(glm::vec3(0.0f, 0.0f, 25.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Eye(0,50,0) Center(0,0,0) Up(0,0,-1)
+// Eye(0,25,0) Center(0,0,0) Up(0,0,-1)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(0.0f, 50.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 0.0f, -1.0f));
+glm::lookAt(glm::vec3(0.0f, 25.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::vec3(0.0f, 0.0f, -1.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,100)
 const glm::mat4 ProjectionMatrix1 =
-    glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 100.0f);
+glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 100.0f);
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(100)
 const glm::mat4 ProjectionMatrix2 =
-    glm::perspective(glm::radians(30.0f), 4.0f/3.0f, 1.0f, 200.0f);
+glm::perspective(glm::radians(30.0f), 4.0f / 3.0f, 1.0f, 200.0f);
 
 void MyApp::createCamera() {
-	CameraData camera;
-	camera.ViewMatrix = ViewMatrix1;
-	camera.PerspectiveMatrix = ProjectionMatrix2;
-	camera.OrthoProjectionMatrix = ProjectionMatrix1;
-	camera.currentRot = glm::quat(1,0,0,0);
-	camera.targetRot = glm::quat(1,0,0,0);
-	Cameras.push_back(camera);
+    CameraData camera;
+    camera.ViewMatrix = ViewMatrix1;
+    camera.PerspectiveMatrix = ProjectionMatrix2;
+    camera.OrthoProjectionMatrix = ProjectionMatrix1;
+    camera.currentRot = glm::quat(1, 0, 0, 0);
+    camera.targetRot = glm::quat(1, 0, 0, 0);
+    Cameras.push_back(camera);
 
-	camera.ViewMatrix = ViewMatrix2;
-	camera.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-	camera.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-	Cameras.push_back(camera);
+    camera.ViewMatrix = ViewMatrix2;
+    camera.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    camera.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    Cameras.push_back(camera);
 
     Camera = new mgl::Camera(UBO_BP);
     Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
-	Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
+    Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
 }
 
 void MyApp::drawScene() {
-	Root->draw();
+    Root->draw();
 }
 
 void MyApp::updateCamera() {
-	// Projection matrix update
+    // Projection matrix update
     if (Cameras[currentCamera].isPerspective) {
         Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
     }
     else {
         Camera->setProjectionMatrix(Cameras[currentCamera].OrthoProjectionMatrix);
-	}
+    }
 
-	// View matrix update
-	Cameras[currentCamera].currentRot = glm::slerp(Cameras[currentCamera].currentRot, Cameras[currentCamera].targetRot, 0.1f);
+    // View matrix update
+    Cameras[currentCamera].currentRot = glm::slerp(Cameras[currentCamera].currentRot, Cameras[currentCamera].targetRot, 0.1f);
     Cameras[currentCamera].ViewMatrix = glm::lookAt(
         Cameras[currentCamera].currentRot * glm::vec3(0.0f, 0.0f, Cameras[currentCamera].orbitRadius),
         glm::vec3(0.0f, 0.0f, 0.0f),
         Cameras[currentCamera].currentRot * glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
+    );
+    Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
 
-	// Redraw scene
-	drawScene();
+    // Redraw scene
+    drawScene();
 }
 
-void MyApp::createScenegraph() {
-	Root = new ScenegraphNode(Mesh, Shaders, ModelMatrix, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-}
+
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
-void MyApp::initCallback(GLFWwindow *win) {
-  createMeshes();
-  createShaderPrograms();
-  createCamera();
-  createScenegraph();
+void MyApp::initCallback(GLFWwindow* win) {
+    createMeshes();
+    createCamera();
+    createScenegraph();
 }
 
-void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
-  glViewport(0, 0, winx, winy);
-  float aspect = static_cast<float>(winx) / static_cast<float>(winy);
-  Cameras[0].PerspectiveMatrix =
-      glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
-  Cameras[1].PerspectiveMatrix =
-      glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
-  updateCamera();
+void MyApp::windowSizeCallback(GLFWwindow* win, int winx, int winy) {
+    glViewport(0, 0, winx, winy);
+    float aspect = static_cast<float>(winx) / static_cast<float>(winy);
+    Cameras[0].PerspectiveMatrix =
+        glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
+    Cameras[1].PerspectiveMatrix =
+        glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
+    updateCamera();
 }
 
-void MyApp::displayCallback(GLFWwindow *win, double elapsed) { 
-    drawScene(); 
+void MyApp::displayCallback(GLFWwindow* win, double elapsed) {
+    drawScene();
 }
 
-void MyApp::keyCallback(GLFWwindow *win, int key, int scancode, int action, int mods) {
+void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         keys[key] = true;
         if (key == GLFW_KEY_C) {
-			currentCamera = (currentCamera + 1) % Cameras.size();
-			Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
+            currentCamera = (currentCamera + 1) % Cameras.size();
+            Camera->setViewMatrix(Cameras[currentCamera].ViewMatrix);
         }
         if (key == GLFW_KEY_P) {
             if (Cameras[currentCamera].isPerspective) {
@@ -214,16 +264,16 @@ void MyApp::keyCallback(GLFWwindow *win, int key, int scancode, int action, int 
             }
             else {
                 Cameras[currentCamera].isPerspective = true;
-			}
+            }
         }
     }
     else if (action == GLFW_RELEASE) {
         keys[key] = false;
-	}
-	updateCamera();
+    }
+    updateCamera();
 }
 
-void MyApp::mouseButtonCallback(GLFWwindow *win, int button, int action, int mods) {
+void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         if (action == GLFW_PRESS) {
             rightMouseDown = true;
@@ -244,7 +294,7 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
         dy *= mouseSensitivity;
 
         glm::quat qYaw = glm::angleAxis(glm::radians(-dx), glm::vec3(0.0f, 1.0f, 0.0f));
-		Cameras[currentCamera].targetRot = qYaw * Cameras[currentCamera].targetRot;
+        Cameras[currentCamera].targetRot = qYaw * Cameras[currentCamera].targetRot;
         glm::vec3 localUp = Cameras[currentCamera].targetRot * glm::vec3(1.0f, 0.0f, 0.0f);
         glm::quat qPitch = glm::angleAxis(glm::radians(dy), localUp);
 
@@ -252,31 +302,31 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
         lastMouseX = xpos;
         lastMouseY = ypos;
 
-		updateCamera();
+        updateCamera();
     }
 }
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
     Cameras[currentCamera].orbitRadius -= static_cast<float>(yoffset) * 2;
-    if (Cameras[currentCamera].orbitRadius < 30.0f) {
-        Cameras[currentCamera].orbitRadius = 30.0f;
+    if (Cameras[currentCamera].orbitRadius < 5.0f) {
+        Cameras[currentCamera].orbitRadius = 5.0f;
     }
-    if (Cameras[currentCamera].orbitRadius > 100.0f) {
-        Cameras[currentCamera].orbitRadius = 100.0f;
-	}
-	    updateCamera();
+    if (Cameras[currentCamera].orbitRadius > 75.0f) {
+        Cameras[currentCamera].orbitRadius = 75.0f;
+    }
+    updateCamera();
 }
 
 /////////////////////////////////////////////////////////////////////////// MAIN
 
-int main(int argc, char *argv[]) {
-  mgl::Engine &engine = mgl::Engine::getInstance();
-  engine.setApp(new MyApp());
-  engine.setOpenGL(4, 6);
-  engine.setWindow(800, 600, "Hello Modern 3D World", 0, 1);
-  engine.init();
-  engine.run();
-  exit(EXIT_SUCCESS);
+int main(int argc, char* argv[]) {
+    mgl::Engine& engine = mgl::Engine::getInstance();
+    engine.setApp(new MyApp());
+    engine.setOpenGL(4, 6);
+    engine.setWindow(800, 600, "Hello Modern 3D World", 0, 1);
+    engine.init();
+    engine.run();
+    exit(EXIT_SUCCESS);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
