@@ -23,7 +23,7 @@ typedef struct CameraData {
 	bool isPerspective = true;
     glm::quat currentRot;
     glm::quat targetRot;
-    float orbitRadius = 15.0f;
+    float orbitRadius = 50.0f;
 } CameraData;
 
 class MyApp : public mgl::App {
@@ -66,7 +66,7 @@ private:
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
 
 void MyApp::createMeshes() {
-    std::string mesh_dir = "./assets/";
+    std::string mesh_dir = "./shapes/";
     // std::string mesh_file = "cube-v.obj";
     // std::string mesh_file = "cube-vn-flat.obj";
     // std::string mesh_file = "cube-vn-smooth.obj";
@@ -78,9 +78,10 @@ void MyApp::createMeshes() {
     // std::string mesh_file = "suzanne-vtn-smooth.obj";
     // std::string mesh_file = "teapot-vn-flat.obj";
     // std::string mesh_file = "teapot-vn-smooth.obj";
-    std::string mesh_file = "bunny-vn-flat.obj";
+    //std::string mesh_file = "bunny-vn-flat.obj";
     // std::string mesh_file = "bunny-vn-smooth.obj";
     //std::string mesh_file = "monkey-torus-vtn-flat.obj";
+    std::string mesh_file = "Shape1_2_BigTriangle.obj";
     std::string mesh_fullname = mesh_dir + mesh_file;
 
     Mesh = new mgl::Mesh();
@@ -118,23 +119,23 @@ void MyApp::createShaderPrograms() {
 const glm::mat4 ModelMatrix =
     glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
 
-// Eye(0,0,15) Center(0,0,0) Up(0,1,0)
+// Eye(0,0,50) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(0.0f, 0.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 50.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Eye(0,15,0) Center(0,0,0) Up(0,0,-1)
+// Eye(0,50,0) Center(0,0,0) Up(0,0,-1)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(0.0f, 15.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 50.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, -1.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,100)
 const glm::mat4 ProjectionMatrix1 =
-    glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 5.0f, 100.0f);
+    glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 100.0f);
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(100)
 const glm::mat4 ProjectionMatrix2 =
-    glm::perspective(glm::radians(30.0f), 4.0f/3.0f, 0.1f, 100.0f);
+    glm::perspective(glm::radians(30.0f), 4.0f/3.0f, 1.0f, 200.0f);
 
 void MyApp::createCamera() {
 	CameraData camera;
@@ -196,9 +197,9 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   glViewport(0, 0, winx, winy);
   float aspect = static_cast<float>(winx) / static_cast<float>(winy);
   Cameras[0].PerspectiveMatrix =
-      glm::perspective(glm::radians(30.0f), aspect, 0.1f, 100.0f);
+      glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
   Cameras[1].PerspectiveMatrix =
-      glm::perspective(glm::radians(30.0f), aspect, 0.1f, 100.0f);
+      glm::perspective(glm::radians(30.0f), aspect, 1.0f, 500.0f);
   updateCamera();
 }
 
@@ -263,12 +264,12 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
 }
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
-    Cameras[currentCamera].orbitRadius -= static_cast<float>(yoffset);
-    if (Cameras[currentCamera].orbitRadius < 2.0f) {
-        Cameras[currentCamera].orbitRadius = 2.0f;
+    Cameras[currentCamera].orbitRadius -= static_cast<float>(yoffset) * 2;
+    if (Cameras[currentCamera].orbitRadius < 30.0f) {
+        Cameras[currentCamera].orbitRadius = 30.0f;
     }
-    if (Cameras[currentCamera].orbitRadius > 50.0f) {
-        Cameras[currentCamera].orbitRadius = 50.0f;
+    if (Cameras[currentCamera].orbitRadius > 100.0f) {
+        Cameras[currentCamera].orbitRadius = 100.0f;
 	}
 	    updateCamera();
 }
