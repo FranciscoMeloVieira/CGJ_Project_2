@@ -119,43 +119,54 @@ mgl::ShaderProgram* MyApp::createShaderPrograms(mgl::Mesh* Mesh) {
 const glm::mat4 I = glm::mat4(1.0f);
 
 void MyApp::createScenegraph() {
-	Root = new ScenegraphNode(nullptr, nullptr, I, glm::vec4(1.0f));
+	Root = new ScenegraphNode();
+
+
+	// Pickagram
+	ScenegraphNode* pickagramRoot = new ScenegraphNode();
+	Root->addChild(pickagramRoot);
+
+    ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(),
+                                createShaderPrograms(Meshes.at("Square").get()),
+                                I,
+		                        glm::vec4(0.0f, 0.7f, 0.0f, 1.0f)); // Green
+	pickagramRoot->addChild(square);
+
     ScenegraphNode* largeTriangle1 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()), 
                                 I, 
-                                glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
-	Root->addChild(largeTriangle1);
-	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(), 
-                                                        createShaderPrograms(Meshes.at("Parallelogram").get()), 
-                                                        I, 
-                                                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-	Root->addChild(parallelogram);
-    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(), 
-                                                            createShaderPrograms(Meshes.at("TallSmallTriangle").get()), 
-                                                            I, 
-		                                                    glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
-	parallelogram->addChild(tallSmallTriangle);
-    ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(), 
-                                                createShaderPrograms(Meshes.at("Square").get()), 
-                                                I, 
-		glm::vec4(0.0f, 0.7f, 0.0f, 1.0f));
-    parallelogram->addChild(square);
-    ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(), 
-                                                            createShaderPrograms(Meshes.at("ShortSmallTriangle").get()), 
-                                                            I, 
-		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    square->addChild(shortSmallTriangle);
-    ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(), 
-                                                        createShaderPrograms(Meshes.at("MediumTriangle").get()), 
-		I,
-        glm::vec4(0.5f, 0.0f, 0.5f, 1.0f));
-	square->addChild(mediumTriangle);
-    ScenegraphNode* largeTriangle = new ScenegraphNode(Meshes.at("BigTriangle").get(), 
-		createShaderPrograms(Meshes.at("BigTriangle").get()),
-		I * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))),
-		glm::vec4(0.3f, 0.6f, 1.0f, 1.0f));
-	mediumTriangle->addChild(largeTriangle);
+		                        glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)); // Magenta
+	square->addChild(largeTriangle1);
 
+    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
+                                createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
+                                I,
+                                glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cyan
+	largeTriangle1->addChild(tallSmallTriangle);
+
+    ScenegraphNode* largeTriangle2 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
+                                createShaderPrograms(Meshes.at("BigTriangle").get()),
+                                I * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))),
+                                glm::vec4(0.3f, 0.6f, 1.0f, 1.0f)); // Light Blue
+	square->addChild(largeTriangle2);
+
+    ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
+                                createShaderPrograms(Meshes.at("MediumTriangle").get()),
+                                I,
+                                glm::vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Purple
+	square->addChild(mediumTriangle);
+
+    ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
+                                createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
+                                I,
+                                glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)); // Red
+	mediumTriangle->addChild(shortSmallTriangle);
+
+	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(), 
+                                createShaderPrograms(Meshes.at("Parallelogram").get()), 
+                                I, 
+		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
+	largeTriangle1->addChild(parallelogram);
 }
 
 

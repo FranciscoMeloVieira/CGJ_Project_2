@@ -7,6 +7,7 @@ class ScenegraphNode {
 	public:
 		ScenegraphNode(mgl::Mesh* mesh, mgl::ShaderProgram* shaders, glm::mat4 transform, glm::vec4 color) :
 			Mesh(mesh), Shaders(shaders), localTransform(transform), color(color) {}
+		ScenegraphNode() = default;
 		void addChild(ScenegraphNode* child);
 		void draw();
 		void setPosition(const glm::vec3& position);
