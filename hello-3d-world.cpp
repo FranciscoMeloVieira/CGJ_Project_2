@@ -136,7 +136,7 @@ void MyApp::createScenegraph() {
     ScenegraphNode* largeTriangle1 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()), 
                                 I, 
-		                        glm::vec4(1.0f, 0.0f, 1.0f, 1.0f)); // Magenta
+		                        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f)); // Magenta
 	square->addChild(largeTriangle1);
 
     ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
@@ -160,7 +160,7 @@ void MyApp::createScenegraph() {
     ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
                                 I,
-                                glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)); // Red
+                                glm::vec4(0.5f, 0.0f, 0.0f, 1.0f)); // Red
 	mediumTriangle->addChild(shortSmallTriangle);
 
 	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(), 

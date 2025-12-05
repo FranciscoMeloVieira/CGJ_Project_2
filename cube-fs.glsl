@@ -30,9 +30,8 @@ vec3 diffuseColor(void) {
     return vec3(intensity);
 }
 vec3 normalShadeColor(void) {
-    vec3 N = normalize(exNormal);
-    float shade = 0.4 + 0.5 * abs(N.x + N.y + N.z);
-    return vec3(exColor.x, exColor.y, exColor.z) * shade;
+    vec3 N = normalize(exNormal) * 0.1;
+    return vec3(exColor.x + N.x, exColor.y + N.y, exColor.z + N.z);
 }
 
 void main(void)
