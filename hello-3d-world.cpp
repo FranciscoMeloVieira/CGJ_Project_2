@@ -51,6 +51,7 @@ private:
 
     bool keys[1024]{ false };
     bool rightMouseDown = false;
+	bool leftMouseDown = false;
 
     double lastMouseX = 0.0f;
     double lastMouseY = 0.0f;
@@ -74,7 +75,7 @@ void MyApp::createMeshes() {
     std::string mesh_dir = "./shapes/";
     std::vector<std::string> mesh_files = {
         "BigTriangle.obj", "Parallelogram.obj", "TallSmallTriangle.obj",
-        "Square.obj", "ShortSmallTriangle.obj", "MediumTriangle.obj"
+		"Square.obj", "ShortSmallTriangle.obj", "MediumTriangle.obj"
     };
 
     for (const auto& file : mesh_files) {
@@ -294,6 +295,15 @@ void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mod
             rightMouseDown = false;
         }
     }
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            leftMouseDown = true;
+            glfwGetCursorPos(win, &lastMouseX, &lastMouseY);
+        }
+        else if (action == GLFW_RELEASE) {
+            leftMouseDown = false;
+        }
+	}
 }
 
 void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
@@ -314,6 +324,26 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
         lastMouseY = ypos;
 
         updateCamera();
+    }
+    if (leftMouseDown)
+    {
+        float dx = static_cast<float>(xpos - lastMouseX);
+        float dy = static_cast<float>(lastMouseY - ypos);
+
+		dx *= mouseSensitivity;
+		dy *= mouseSensitivity;
+
+        glm::vec3 camRight = Cameras[currentCamera].targetRot * glm::vec3(1, 0, 0);
+        glm::vec3 camForward = Cameras[currentCamera].targetRot * glm::vec3(0, 0, -1);
+
+        glm::vec3 movement =
+            camRight * dx * 0.1f +
+            camForward * dy * 0.1f;
+
+		Root->setPosition((movement));
+
+        lastMouseX = xpos;
+        lastMouseY = ypos;
     }
 }
 
