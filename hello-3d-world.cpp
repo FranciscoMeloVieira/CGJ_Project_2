@@ -325,8 +325,7 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
 
         updateCamera();
     }
-    if (leftMouseDown)
-    {
+    if (leftMouseDown) {
         float dx = static_cast<float>(xpos - lastMouseX);
         float dy = static_cast<float>(lastMouseY - ypos);
 
