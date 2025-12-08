@@ -67,10 +67,11 @@ void ScenegraphNode::setScale(const glm::vec3& scale) {
 void ScenegraphNode::setAnimation(TransformTRS start, TransformTRS end) {
 	this->start = start;
 	this->end = end;
+	isAnimated = true;
 }
 
 void ScenegraphNode::updateAnimation(float t) {
-	localTransform = interpolateTRS(start, end, t);
+	if (isAnimated) localTransform = interpolateTRS(start, end, t);
 	for (auto& child : children) {
 		child->updateAnimation(t);
 	}

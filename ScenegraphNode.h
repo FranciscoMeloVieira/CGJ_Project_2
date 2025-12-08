@@ -41,5 +41,6 @@ class ScenegraphNode {
 		glm::vec4 color = glm::vec4(1.0f);
 		TransformTRS start;
 		TransformTRS end;;
+		bool isAnimated = false;
 };
 

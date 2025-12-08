@@ -138,9 +138,6 @@ void MyApp::transformations() {
         )
         });
 
-    
-    // Pickagram Root
-
 	// Big Triangle 1
 	const float hypotenuse = 89.0f * global_scale;
 	const float side_length = glm::sqrt(glm::pow(hypotenuse, 2) * 2) / 2;
@@ -152,6 +149,7 @@ void MyApp::transformations() {
     const float square_side = side_length / 2;
 	const float square_diagonal = glm::sqrt(2 * glm::pow(square_side, 2));
 
+    Transforms.insert({ "Square_Translation_Start", TransformTRS(glm::vec3(square_diagonal / 2, 0.0f, 0.0f)) });
 	Transforms.insert({ "Square_Translation_End", TransformTRS(glm::vec3(0.0f, 0.0f, 0.0f)) });
 	Transforms.insert({ "Square_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
@@ -187,7 +185,10 @@ void MyApp::transformations() {
 	const float medium_side = 89.0f * global_scale / 2;
 	const float medium_centroid = medium_side / 3;
 
-    Transforms.insert({ "MediumTriangle_Start", TransformTRS(glm::vec3(square_diagonal / 2 - medium_centroid, 0.0f, medium_side - medium_centroid))});
+    Transforms.insert({ "MediumTriangle_Translation_Start", TransformTRS(glm::vec3(square_diagonal / 2 - medium_centroid, 0.0f, medium_side - medium_centroid)) });
+    Transforms.insert({ "MediumTriangle_Translation_End", TransformTRS(glm::vec3(-medium_centroid, 0.0f, -(square_diagonal / 2 + (medium_side - medium_centroid)))) });
+
+    Transforms.insert({ "MediumTriangle_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
 	// Short Small Triangle
 	const float short_small_hypotenuse = medium_side;
@@ -196,8 +197,11 @@ void MyApp::transformations() {
 	const float short_small_centroid_diagonal = glm::sqrt(glm::pow(short_small_centroid, 2) * 2);
 	const float short_small_height = short_small_side * glm::sin(glm::radians(45.0f));
 
-    Transforms.insert({ "ShortSmallTriangle_Start", TransformTRS(glm::vec3(medium_centroid - (short_small_height - short_small_centroid_diagonal), 0.0f,
+    Transforms.insert({ "ShortSmallTriangle_Translation_Start", TransformTRS(glm::vec3(medium_centroid - (short_small_height - short_small_centroid_diagonal), 0.0f,
                                                                                 -(medium_side + (short_small_hypotenuse / 2 - medium_centroid)))) });
+    Transforms.insert({ "ShortSmallTriangle_Translation_End", TransformTRS(glm::vec3(-(medium_side - medium_centroid), 0.0f, 0.0f)) });
+
+    Transforms.insert({ "ShortSmallTriangle_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
 	// Parallelogram
 	const float parallelogram_side = side_length / 2;
@@ -206,8 +210,16 @@ void MyApp::transformations() {
     const float parallelogram_centroid_x = (parallelogram_base + parallelogram_side * glm::sin(glm::radians(45.0f))) / 2;
     
 
-    Transforms.insert({ "Parallelogram_Start", TransformTRS(glm::vec3(parallelogram_centroid_x - (height - centroid_diagonal), 0.0f,
-                                                                            hypotenuse / 2 - parallelogram_height / 2))});
+    Transforms.insert({ "Parallelogram_Translation_Start", TransformTRS(glm::vec3(parallelogram_centroid_x - (height - centroid_diagonal), 0.0f,
+                                                                            hypotenuse / 2 - parallelogram_height / 2)) });
+    Transforms.insert({ "Parallelogram_Translation_End", TransformTRS(glm::vec3(side_length -centroid / 2, 0.0f,
+                                                                            centroid + parallelogram_height / 2)) });
+    Transforms.insert({ "Parallelogram_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f))) });
+
+    // Pickagram Root
+    Transforms.insert({ "PickagramRoot_Translation_End", TransformTRS(glm::vec3(0.0f, parallelogram_height + side_length, 0.0f)) });
+	Transforms.insert({ "PickagramRoot_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+                                                                   * glm::angleAxis(glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
 }
 
@@ -215,25 +227,30 @@ void MyApp::createScenegraph() {
 
 	Root = new ScenegraphNode();
 
-	// Pickagram
-	ScenegraphNode* pickagramRoot = new ScenegraphNode();
-	Root->addChild(pickagramRoot);
-
     //Board
     ScenegraphNode* boardNode = new ScenegraphNode(
         Meshes.at("Cube").get(),
         createShaderPrograms(Meshes.at("Cube").get()),
         Transforms.at("Board_Start"),
-        glm::vec4(0.8f, 0.8f, 0.8f, 1.0f) // light gray
+        glm::vec4(0.36f, 0.22f, 0.08f, 1.0f)
     );
     Root->addChild(boardNode);
 
+	// Pickagram
+	ScenegraphNode* pickagramRoot_translate = new ScenegraphNode();
+	Root->addChild(pickagramRoot_translate);
+    pickagramRoot_translate->setAnimation(TransformTRS(),
+		                                  Transforms.at("PickagramRoot_Translation_End"));
+	ScenegraphNode* pickagramRoot_rotate = new ScenegraphNode();
+    pickagramRoot_rotate->setAnimation(TransformTRS(),
+                                       Transforms.at("PickagramRoot_Rotation_End"));
+    pickagramRoot_translate->addChild(pickagramRoot_rotate);
 
 	// Square
 	ScenegraphNode* square_translate = new ScenegraphNode();
-	Root->addChild(square_translate);
-    square_translate->setAnimation(TransformTRS(),
-		                            Transforms.at("Square_Translation_End"));
+    square_translate->setAnimation(Transforms.at("Square_Translation_Start"),
+		                           Transforms.at("Square_Translation_End"));
+    pickagramRoot_rotate->addChild(square_translate);
 
     ScenegraphNode* square_rotate = new ScenegraphNode(Meshes.at("Square").get(),
                                 createShaderPrograms(Meshes.at("Square").get()),
@@ -288,23 +305,48 @@ void MyApp::createScenegraph() {
 		                                Transforms.at("BigTriangle2_Rotation_End"));
     largeTriangle2_translate->addChild(largeTriangle2_rotate);
 
-    /*ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
+	// Medium Triangle
+	ScenegraphNode* mediumTriangle_translate = new ScenegraphNode();
+    mediumTriangle_translate->setAnimation(Transforms.at("MediumTriangle_Translation_Start"),
+		                                   Transforms.at("MediumTriangle_Translation_End"));
+
+	square_translate->addChild(mediumTriangle_translate);
+
+    ScenegraphNode* mediumTriangle_rotate = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
                                 createShaderPrograms(Meshes.at("MediumTriangle").get()),
-		                        Transforms.at("MediumTriangle_Start"),
+		                        TransformTRS(),
                                 glm::vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Purple
-    square_translate->addChild(mediumTriangle);
+    mediumTriangle_rotate->setAnimation(TransformTRS(),
+		                                Transforms.at("MediumTriangle_Rotation_End"));
+	mediumTriangle_translate->addChild(mediumTriangle_rotate);
 
-    ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
+	// Short Small Triangle
+	ScenegraphNode* shortSmallTriangle_translate = new ScenegraphNode();
+    shortSmallTriangle_translate->setAnimation(Transforms.at("ShortSmallTriangle_Translation_Start"),
+		                                       Transforms.at("ShortSmallTriangle_Translation_End"));
+	mediumTriangle_translate->addChild(shortSmallTriangle_translate);
+    ScenegraphNode* shortSmallTriangle_rotate = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
-		                        Transforms.at("ShortSmallTriangle_Start"),
+		                        TransformTRS(),
                                 glm::vec4(0.5f, 0.0f, 0.0f, 1.0f)); // Red
-	mediumTriangle->addChild(shortSmallTriangle);
+    shortSmallTriangle_rotate->setAnimation(TransformTRS(),
+		                                    Transforms.at("ShortSmallTriangle_Rotation_End"));
+	shortSmallTriangle_translate->addChild(shortSmallTriangle_rotate);
 
-	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(),
+	// Parallelogram
+	ScenegraphNode* parallelogram_translate = new ScenegraphNode();
+    parallelogram_translate->setAnimation(Transforms.at("Parallelogram_Translation_Start"),
+		                                  Transforms.at("Parallelogram_Translation_End"));
+
+	largeTriangle1_translate->addChild(parallelogram_translate);
+
+	ScenegraphNode* parallelogram_rotate = new ScenegraphNode(Meshes.at("Parallelogram").get(),
                                 createShaderPrograms(Meshes.at("Parallelogram").get()), 
-		                        Transforms.at("Parallelogram_Start"),
+		                        TransformTRS(),
 		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
-	largeTriangle1->addChild(parallelogram);*/
+    parallelogram_rotate->setAnimation(TransformTRS(),
+		                               Transforms.at("Parallelogram_Rotation_End"));
+	parallelogram_translate->addChild(parallelogram_rotate);
 }
 
 
