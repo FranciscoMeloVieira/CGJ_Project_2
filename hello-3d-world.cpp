@@ -81,7 +81,7 @@ void MyApp::createMeshes() {
     std::string mesh_dir = "./shapes/";
     std::vector<std::string> mesh_files = {
         "BigTriangle.obj", "Parallelogram.obj", "TallSmallTriangle.obj",
-		"Square.obj", "ShortSmallTriangle.obj", "MediumTriangle.obj"
+		"Square.obj", "ShortSmallTriangle.obj", "MediumTriangle.obj", "Cube.obj"
     };
 
     for (const auto& file : mesh_files) {
@@ -129,6 +129,16 @@ const float global_scale = 0.1f;
 
 void MyApp::transformations() {
 
+    //Board
+    Transforms.insert({ "Board_Start",
+        TransformTRS(
+            glm::vec3(0.0f, -2.8f, 0.0f),
+            glm::angleAxis(glm::radians(270.0f), glm::vec3(1,0,0)), 
+            glm::vec3(10.0f, 10.0f, 0.1f)                 
+        )
+        });
+
+    
     // Pickagram Root
 
 	// Big Triangle 1
@@ -208,6 +218,15 @@ void MyApp::createScenegraph() {
 	// Pickagram
 	ScenegraphNode* pickagramRoot = new ScenegraphNode();
 	Root->addChild(pickagramRoot);
+
+    //Board
+    ScenegraphNode* boardNode = new ScenegraphNode(
+        Meshes.at("Cube").get(),
+        createShaderPrograms(Meshes.at("Cube").get()),
+        Transforms.at("Board_Start"),
+        glm::vec4(0.8f, 0.8f, 0.8f, 1.0f) // light gray
+    );
+    Root->addChild(boardNode);
 
 
 	// Square
@@ -370,6 +389,7 @@ void MyApp::processInput() {
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
 void MyApp::initCallback(GLFWwindow* win) {
+    glDisable(GL_CULL_FACE);
     createMeshes();
     createCamera();
     transformations();
