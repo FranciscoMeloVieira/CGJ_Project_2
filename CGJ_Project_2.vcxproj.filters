@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="hello-3d-world.cpp">
+    <ClCompile Include="Pickagram3D_G18.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Libraries\mgl\mglApp.cpp">

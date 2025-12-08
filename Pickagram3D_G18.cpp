@@ -1,13 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Adding a camera and moving to the 3rd dimension.
-// A "Hello 3D World" of Modern OpenGL.
-//
-// Copyright (c) 2013-25 by Carlos Martinho
-//
-// INTRODUCES:
-// VIEW PIPELINE, UNIFORM BUFFER OBJECTS, mglCamera.hpp
-//
+// Pickagram Puzzle - 3D Modern OpenGL Application
+// 
+// This application renders a Pickagram puzzle using OpenGL techniques.
+// The Pickagram is composed of seven geometric shapes. Each shape is assigned
+// a distinct color. The shapes are transformed and positioned to form a
+// pickagram in the shape of a dragon.
+// 
+// 
+// Computer Graphics for Games
+// Group 18
+// Francisco Vieira - 103360
+// Diogo Pereira - 	116314
+// 
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <memory>
@@ -26,7 +31,7 @@ typedef struct CameraData {
     bool isPerspective = true;
     glm::quat currentRot;
     glm::quat targetRot;
-    float orbitRadius = 25.0f;
+    float orbitRadius = 35.0f;
 } CameraData;
 
 class MyApp : public mgl::App {
@@ -44,11 +49,12 @@ private:
     mgl::ShaderProgram* Shaders = nullptr;
     mgl::Camera* Camera = nullptr;
     std::vector<CameraData> Cameras;
-    int currentCamera = 0;
     GLint ModelMatrixId, ColorId;
     std::unordered_map<std::string, std::shared_ptr<mgl::Mesh>> Meshes;
     ScenegraphNode* Root = nullptr;
 	std::unordered_map<std::string, TransformTRS> Transforms;
+
+    int currentCamera = 1;
 
     bool keys[1024]{ false };
     bool rightMouseDown = false;
@@ -77,6 +83,16 @@ private:
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
 
+/**
+ * @brief Loads mesh files from the `./shapes/` directory and registers them.
+ *
+ * For each OBJ listed in `mesh_files`, creates an `mgl::Mesh`, joins identical
+ * vertices for efficiency, loads the mesh data, and stores it in `Meshes`
+ * keyed by the filename without extension (e.g., "Square", "Cube").
+ *
+ * Postconditions:
+ *  - `Meshes` contains all required shapes used by `createScenegraph()`.
+ */
 void MyApp::createMeshes() {
     std::string mesh_dir = "./shapes/";
     std::vector<std::string> mesh_files = {
@@ -125,8 +141,37 @@ mgl::ShaderProgram* MyApp::createShaderPrograms(mgl::Mesh* Mesh) {
 
 const glm::mat4 I = glm::mat4(1.0f);
 
+// Global scale factor for all tangram piece dimensions
 const float global_scale = 0.1f;
 
+
+/**
+ * @brief Populates named transforms for all scene pieces and root animations.
+ *
+ * Uses derived geometric relations (side, height, centroids and diagonals)
+ * from the global scale to compute start/end translation and rotation
+ * `TransformTRS` entries stored in `Transforms`. These entries are consumed
+ * by `createScenegraph()` to wire animations for each node.
+ *
+ * Inserts transforms for:
+ *  - Board
+ *  - Square
+ *  - BigTriangle1 and BigTriangle2
+ *  - TallSmallTriangle, MediumTriangle, ShortSmallTriangle
+ *  - Parallelogram
+ *  - Pickagram root (global translation and rotation)
+ *
+ * Preconditions:
+ *  - `Transforms` is available and will be populated/overwritten.
+ *
+ * Postconditions:
+ *  - All transform keys referenced in `createScenegraph()` exist.
+ * 
+ * Notes:
+ * Uses 89.0f as the base length for the largest triangle, which is defined in the pickagram rule book.
+ * Imported meshes are a 10th of that size, so the global scale is set to 0.1f.
+ * @Warning: The code assumes the meshes are scaled to this global scale.
+ */
 void MyApp::transformations() {
 
     //Board
@@ -222,131 +267,267 @@ void MyApp::transformations() {
                                                                    * glm::angleAxis(glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
 }
-
+/**
+ * @brief Builds the complete scenegraph for the application.
+ *
+ * This function creates a hierarchical scenegraph consisting of:
+ *  - A static board
+ *  - A Pickagram root with global animation
+ *  - Individual geometric shapes (square, triangles, parallelogram)
+ *
+ * Each shape uses a two-node pattern:
+ *  - Translation node: handles positional animation
+ *  - Rotation/render node: handles rotation and mesh rendering
+ *
+ * This separation allows clean hierarchical animation and reuse of transforms.
+ * 
+ * Sub-shapes are nested as children of their parent translation nodes to maintain relative positioning and not be affected by their parent's rotation.
+ * 
+ * All shapes are colored distinctly for visual clarity, and use normal shading to distinguish faces.
+ */
 void MyApp::createScenegraph() {
 
-	Root = new ScenegraphNode();
+    /**
+     * Root node of the entire scenegraph.
+     * All objects in the scene are attached (directly or indirectly) to this node.
+     */
+    Root = new ScenegraphNode();
 
-    //Board
+    // -------------------------------------------------------------------------
+    // Board (static base)
+    // -------------------------------------------------------------------------
+    /**
+     * Represents the wooden board on which the Pickagram pieces are placed.
+     * This node is static and does not animate.
+     */
     ScenegraphNode* boardNode = new ScenegraphNode(
         Meshes.at("Cube").get(),
         createShaderPrograms(Meshes.at("Cube").get()),
         Transforms.at("Board_Start"),
-        glm::vec4(0.36f, 0.22f, 0.08f, 1.0f)
+        glm::vec4(0.36f, 0.22f, 0.08f, 1.0f) // Brown color
     );
     Root->addChild(boardNode);
 
-	// Pickagram
-	ScenegraphNode* pickagramRoot_translate = new ScenegraphNode();
-	Root->addChild(pickagramRoot_translate);
-    pickagramRoot_translate->setAnimation(TransformTRS(),
-		                                  Transforms.at("PickagramRoot_Translation_End"));
-	ScenegraphNode* pickagramRoot_rotate = new ScenegraphNode();
-    pickagramRoot_rotate->setAnimation(TransformTRS(),
-                                       Transforms.at("PickagramRoot_Rotation_End"));
+    // -------------------------------------------------------------------------
+    // Pickagram Root (global translation + rotation)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation root for the entire Pickagram.
+     * Moves the whole puzzle as a single unit.
+     */
+    ScenegraphNode* pickagramRoot_translate = new ScenegraphNode();
+    Root->addChild(pickagramRoot_translate);
+    pickagramRoot_translate->setAnimation(
+        TransformTRS(),
+        Transforms.at("PickagramRoot_Translation_End")
+    );
+
+    /**
+     * Rotation root for the entire Pickagram.
+     * Allows rotating all child shapes together.
+     */
+    ScenegraphNode* pickagramRoot_rotate = new ScenegraphNode();
+    pickagramRoot_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("PickagramRoot_Rotation_End")
+    );
     pickagramRoot_translate->addChild(pickagramRoot_rotate);
 
-	// Square
-	ScenegraphNode* square_translate = new ScenegraphNode();
-    square_translate->setAnimation(Transforms.at("Square_Translation_Start"),
-		                           Transforms.at("Square_Translation_End"));
+    // -------------------------------------------------------------------------
+    // Square (center piece)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* square_translate = new ScenegraphNode();
+    square_translate->setAnimation(
+        Transforms.at("Square_Translation_Start"),
+        Transforms.at("Square_Translation_End")
+    );
     pickagramRoot_rotate->addChild(square_translate);
 
-    ScenegraphNode* square_rotate = new ScenegraphNode(Meshes.at("Square").get(),
-                                createShaderPrograms(Meshes.at("Square").get()),
-                                TransformTRS(),
-		                        glm::vec4(0.0f, 0.7f, 0.0f, 1.0f)); // Green
-	square_translate->addChild(square_rotate);
-    square_rotate->setAnimation(TransformTRS(),
-		                        Transforms.at("Square_Rotation_End"));
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* square_rotate = new ScenegraphNode(
+        Meshes.at("Square").get(),
+        createShaderPrograms(Meshes.at("Square").get()),
+        TransformTRS(),
+        glm::vec4(0.0f, 0.7f, 0.0f, 1.0f) // Green
+    );
+    square_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("Square_Rotation_End")
+    );
+    square_translate->addChild(square_rotate);
 
+    // -------------------------------------------------------------------------
+	// Large Triangle 1 (child of Square)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* largeTriangle1_translate = new ScenegraphNode();
+    largeTriangle1_translate->setAnimation(
+        Transforms.at("BigTriangle1_Translation_Start"),
+        Transforms.at("BigTriangle1_Translation_End")
+    );
+    square_translate->addChild(largeTriangle1_translate);
 
-	// Large Triangle 1
-	ScenegraphNode* largeTriangle1_translate = new ScenegraphNode();
-	largeTriangle1_translate->setAnimation(Transforms.at("BigTriangle1_Translation_Start"), 
-		                                   Transforms.at("BigTriangle1_Translation_End"));
-	square_translate->addChild(largeTriangle1_translate);
-
-    ScenegraphNode* largeTriangle1_rotate = new ScenegraphNode(Meshes.at("BigTriangle").get(),
-                                createShaderPrograms(Meshes.at("BigTriangle").get()), 
-                                TransformTRS(),
-		                        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f)); // Magenta
-    largeTriangle1_rotate->setAnimation(TransformTRS(),
-		                                Transforms.at("BigTriangle1_Rotation_End"));
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* largeTriangle1_rotate = new ScenegraphNode(
+        Meshes.at("BigTriangle").get(),
+        createShaderPrograms(Meshes.at("BigTriangle").get()),
+        TransformTRS(),
+        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f) // Magenta
+    );
+    largeTriangle1_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("BigTriangle1_Rotation_End")
+    );
     largeTriangle1_translate->addChild(largeTriangle1_rotate);
 
-	// Tall Small Triangle
-	ScenegraphNode* tallSmallTriangle_translate = new ScenegraphNode();
-    tallSmallTriangle_translate->setAnimation(Transforms.at("TallSmallTriangle_Translation_Start"),
-		                                      Transforms.at("TallSmallTriangle_Translation_End"));
+    // -------------------------------------------------------------------------
+    // Tall Small Triangle (child of Large Triangle 1)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* tallSmallTriangle_translate = new ScenegraphNode();
+    tallSmallTriangle_translate->setAnimation(
+        Transforms.at("TallSmallTriangle_Translation_Start"),
+        Transforms.at("TallSmallTriangle_Translation_End")
+    );
+    largeTriangle1_translate->addChild(tallSmallTriangle_translate);
 
-	largeTriangle1_translate->addChild(tallSmallTriangle_translate);
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* tallSmallTriangle_rotate = new ScenegraphNode(
+        Meshes.at("TallSmallTriangle").get(),
+        createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
+        TransformTRS(),
+        glm::vec4(0.0f, 1.0f, 1.0f, 1.0f) // Cyan
+    );
+    tallSmallTriangle_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("TallSmallTriangle_Rotation_End")
+    );
+    tallSmallTriangle_translate->addChild(tallSmallTriangle_rotate);
 
-    ScenegraphNode* tallSmallTriangle_rotate = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
-                                createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
-		                        TransformTRS(),
-                                glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cyan
-	tallSmallTriangle_rotate->setAnimation(TransformTRS(),
-		                            Transforms.at("TallSmallTriangle_Rotation_End"));
-	tallSmallTriangle_translate->addChild(tallSmallTriangle_rotate);
+    // -------------------------------------------------------------------------
+	// Large Triangle 2 (child of Square)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* largeTriangle2_translate = new ScenegraphNode();
+    largeTriangle2_translate->setAnimation(
+        Transforms.at("BigTriangle2_Translation_Start"),
+        Transforms.at("BigTriangle2_Translation_End")
+    );
+    square_translate->addChild(largeTriangle2_translate);
 
-	// Large Triangle 2
-	ScenegraphNode* largeTriangle2_translate = new ScenegraphNode();
-    largeTriangle2_translate->setAnimation(Transforms.at("BigTriangle2_Translation_Start"),
-		                                   Transforms.at("BigTriangle2_Translation_End"));
-
-	square_translate->addChild(largeTriangle2_translate);
-
-    ScenegraphNode* largeTriangle2_rotate = new ScenegraphNode(Meshes.at("BigTriangle").get(),
-                                createShaderPrograms(Meshes.at("BigTriangle").get()),
-                                Transforms.at("BigTriangle2_Rotation_Start"),
-                                glm::vec4(0.3f, 0.6f, 1.0f, 1.0f)); // Light Blue
-    largeTriangle2_rotate->setAnimation(Transforms.at("BigTriangle2_Rotation_Start"),
-		                                Transforms.at("BigTriangle2_Rotation_End"));
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* largeTriangle2_rotate = new ScenegraphNode(
+        Meshes.at("BigTriangle").get(),
+        createShaderPrograms(Meshes.at("BigTriangle").get()),
+        Transforms.at("BigTriangle2_Rotation_Start"),
+        glm::vec4(0.3f, 0.6f, 1.0f, 1.0f) // Light Blue
+    );
+    largeTriangle2_rotate->setAnimation(
+        Transforms.at("BigTriangle2_Rotation_Start"),
+        Transforms.at("BigTriangle2_Rotation_End")
+    );
     largeTriangle2_translate->addChild(largeTriangle2_rotate);
 
-	// Medium Triangle
-	ScenegraphNode* mediumTriangle_translate = new ScenegraphNode();
-    mediumTriangle_translate->setAnimation(Transforms.at("MediumTriangle_Translation_Start"),
-		                                   Transforms.at("MediumTriangle_Translation_End"));
+    // -------------------------------------------------------------------------
+	// Medium Triangle (child of Square)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* mediumTriangle_translate = new ScenegraphNode();
+    mediumTriangle_translate->setAnimation(
+        Transforms.at("MediumTriangle_Translation_Start"),
+        Transforms.at("MediumTriangle_Translation_End")
+    );
+    square_translate->addChild(mediumTriangle_translate);
 
-	square_translate->addChild(mediumTriangle_translate);
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* mediumTriangle_rotate = new ScenegraphNode(
+        Meshes.at("MediumTriangle").get(),
+        createShaderPrograms(Meshes.at("MediumTriangle").get()),
+        TransformTRS(),
+        glm::vec4(0.5f, 0.0f, 0.5f, 1.0f) // Purple
+    );
+    mediumTriangle_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("MediumTriangle_Rotation_End")
+    );
+    mediumTriangle_translate->addChild(mediumTriangle_rotate);
 
-    ScenegraphNode* mediumTriangle_rotate = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
-                                createShaderPrograms(Meshes.at("MediumTriangle").get()),
-		                        TransformTRS(),
-                                glm::vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Purple
-    mediumTriangle_rotate->setAnimation(TransformTRS(),
-		                                Transforms.at("MediumTriangle_Rotation_End"));
-	mediumTriangle_translate->addChild(mediumTriangle_rotate);
+    // -------------------------------------------------------------------------
+    // Short Small Triangle (child of Medium Triangle)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* shortSmallTriangle_translate = new ScenegraphNode();
+    shortSmallTriangle_translate->setAnimation(
+        Transforms.at("ShortSmallTriangle_Translation_Start"),
+        Transforms.at("ShortSmallTriangle_Translation_End")
+    );
+    mediumTriangle_translate->addChild(shortSmallTriangle_translate);
 
-	// Short Small Triangle
-	ScenegraphNode* shortSmallTriangle_translate = new ScenegraphNode();
-    shortSmallTriangle_translate->setAnimation(Transforms.at("ShortSmallTriangle_Translation_Start"),
-		                                       Transforms.at("ShortSmallTriangle_Translation_End"));
-	mediumTriangle_translate->addChild(shortSmallTriangle_translate);
-    ScenegraphNode* shortSmallTriangle_rotate = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
-                                createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
-		                        TransformTRS(),
-                                glm::vec4(0.5f, 0.0f, 0.0f, 1.0f)); // Red
-    shortSmallTriangle_rotate->setAnimation(TransformTRS(),
-		                                    Transforms.at("ShortSmallTriangle_Rotation_End"));
-	shortSmallTriangle_translate->addChild(shortSmallTriangle_rotate);
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* shortSmallTriangle_rotate = new ScenegraphNode(
+        Meshes.at("ShortSmallTriangle").get(),
+        createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
+        TransformTRS(),
+        glm::vec4(0.5f, 0.0f, 0.0f, 1.0f) // Red
+    );
+    shortSmallTriangle_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("ShortSmallTriangle_Rotation_End")
+    );
+    shortSmallTriangle_translate->addChild(shortSmallTriangle_rotate);
 
-	// Parallelogram
-	ScenegraphNode* parallelogram_translate = new ScenegraphNode();
-    parallelogram_translate->setAnimation(Transforms.at("Parallelogram_Translation_Start"),
-		                                  Transforms.at("Parallelogram_Translation_End"));
+    // -------------------------------------------------------------------------
+    // Parallelogram (child of Large Triangle 1)
+    // -------------------------------------------------------------------------
+    /**
+     * Translation node.
+     */
+    ScenegraphNode* parallelogram_translate = new ScenegraphNode();
+    parallelogram_translate->setAnimation(
+        Transforms.at("Parallelogram_Translation_Start"),
+        Transforms.at("Parallelogram_Translation_End")
+    );
+    largeTriangle1_translate->addChild(parallelogram_translate);
 
-	largeTriangle1_translate->addChild(parallelogram_translate);
-
-	ScenegraphNode* parallelogram_rotate = new ScenegraphNode(Meshes.at("Parallelogram").get(),
-                                createShaderPrograms(Meshes.at("Parallelogram").get()), 
-		                        TransformTRS(),
-		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
-    parallelogram_rotate->setAnimation(TransformTRS(),
-		                               Transforms.at("Parallelogram_Rotation_End"));
-	parallelogram_translate->addChild(parallelogram_rotate);
+    /**
+     * Rotation and render node.
+     */
+    ScenegraphNode* parallelogram_rotate = new ScenegraphNode(
+        Meshes.at("Parallelogram").get(),
+        createShaderPrograms(Meshes.at("Parallelogram").get()),
+        TransformTRS(),
+        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f) // Orange
+    );
+    parallelogram_rotate->setAnimation(
+        TransformTRS(),
+        Transforms.at("Parallelogram_Rotation_End")
+    );
+    parallelogram_translate->addChild(parallelogram_rotate);
 }
 
 
@@ -370,8 +551,9 @@ glm::lookAt(glm::vec3(0.0f, 25.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
     glm::vec3(0.0f, 0.0f, -1.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,100)
-const glm::mat4 ProjectionMatrix1 =
+const glm::mat4 OrthoMatrix =
 glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 1.0f, 100.0f);
+
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(100)
 const glm::mat4 ProjectionMatrix2 =
@@ -381,14 +563,16 @@ void MyApp::createCamera() {
     CameraData camera;
     camera.ViewMatrix = ViewMatrix1;
     camera.PerspectiveMatrix = ProjectionMatrix2;
-    camera.OrthoProjectionMatrix = ProjectionMatrix1;
+    camera.OrthoProjectionMatrix = OrthoMatrix;
     camera.currentRot = glm::quat(1, 0, 0, 0);
     camera.targetRot = glm::quat(1, 0, 0, 0);
+    camera.orbitRadius = 70.0f;
     Cameras.push_back(camera);
 
     camera.ViewMatrix = ViewMatrix2;
     camera.currentRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
     camera.targetRot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    camera.orbitRadius = 35.0f;
     Cameras.push_back(camera);
 
     Camera = new mgl::Camera(UBO_BP);
@@ -417,16 +601,6 @@ void MyApp::updateCamera() {
     // Redraw scene
     drawScene();
 }
-
-void MyApp::processInput() {
-    if (keys[GLFW_KEY_RIGHT] && !keys[GLFW_KEY_LEFT])
-        animationDirection = +1;
-    else if (keys[GLFW_KEY_LEFT] && !keys[GLFW_KEY_RIGHT])
-        animationDirection = -1;
-    else
-        animationDirection = 0;
-}
-
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
@@ -458,6 +632,9 @@ void MyApp::displayCallback(GLFWwindow* win, double elapsed) {
     drawScene();
 }
 
+/*
+* Note: Keys directly processed here are keys that don't have a hold down mechanic.
+*/
 void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
 
     if (action == GLFW_PRESS) {
@@ -479,6 +656,17 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
         keys[key] = false;
     }
     updateCamera();
+}
+/**
+ * @brief Processes input for keys that have hold down mechanics.
+ */
+void MyApp::processInput() {
+    if (keys[GLFW_KEY_RIGHT] && !keys[GLFW_KEY_LEFT])
+        animationDirection = +1;
+    else if (keys[GLFW_KEY_LEFT] && !keys[GLFW_KEY_RIGHT])
+        animationDirection = -1;
+    else
+        animationDirection = 0;
 }
 
 void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
@@ -544,11 +732,11 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
     Cameras[currentCamera].orbitRadius -= static_cast<float>(yoffset) * 2;
-    if (Cameras[currentCamera].orbitRadius < 5.0f) {
-        Cameras[currentCamera].orbitRadius = 5.0f;
+    if (Cameras[currentCamera].orbitRadius < 10.0f) {
+        Cameras[currentCamera].orbitRadius = 10.0f;
     }
-    if (Cameras[currentCamera].orbitRadius > 75.0f) {
-        Cameras[currentCamera].orbitRadius = 75.0f;
+    if (Cameras[currentCamera].orbitRadius > 95.0f) {
+        Cameras[currentCamera].orbitRadius = 95.0f;
     }
     updateCamera();
 }
