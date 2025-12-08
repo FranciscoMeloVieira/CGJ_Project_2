@@ -48,6 +48,7 @@ private:
     GLint ModelMatrixId, ColorId;
     std::unordered_map<std::string, std::shared_ptr<mgl::Mesh>> Meshes;
     ScenegraphNode* Root = nullptr;
+	std::unordered_map<std::string, glm::mat4> Transforms;
 
     bool keys[1024]{ false };
     bool rightMouseDown = false;
@@ -67,6 +68,7 @@ private:
     void drawScene();
     void updateCamera();
     void createScenegraph();
+    void transformations();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
@@ -119,9 +121,29 @@ mgl::ShaderProgram* MyApp::createShaderPrograms(mgl::Mesh* Mesh) {
 
 const glm::mat4 I = glm::mat4(1.0f);
 
-void MyApp::createScenegraph() {
-	Root = new ScenegraphNode();
+const float global_scale = 0.1f;
 
+void MyApp::transformations() {
+
+	// Big Triangle 1
+	const float hypotenuse = 89.0f * global_scale;
+	const float side_length = glm::sqrt(glm::pow(hypotenuse, 2) * 2) / 2;
+    const float centroid = side_length / 3;
+	const float centroid_diagonal = glm::sqrt(glm::pow(centroid, 2) * 2);
+
+	// Square
+    const float square_side = side_length / 2;
+	const float square_diagonal = glm::sqrt(2 * glm::pow(square_side, 2));
+
+	Transforms.insert({ "Square_Start", glm::translate(I, glm::vec3(square_diagonal / 2, 0.0f, 0.0f)) });
+    Transforms.insert({ "BigTriangle1_Start", glm::translate(I, glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f)) });
+
+}
+
+
+void MyApp::createScenegraph() {
+
+	Root = new ScenegraphNode();
 
 	// Pickagram
 	ScenegraphNode* pickagramRoot = new ScenegraphNode();
@@ -129,17 +151,17 @@ void MyApp::createScenegraph() {
 
     ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(),
                                 createShaderPrograms(Meshes.at("Square").get()),
-                                I,
+                                Transforms.at("Square_Start"),
 		                        glm::vec4(0.0f, 0.7f, 0.0f, 1.0f)); // Green
 	pickagramRoot->addChild(square);
 
     ScenegraphNode* largeTriangle1 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()), 
-                                I, 
+                                Transforms.at("BigTriangle1_Start"),
 		                        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f)); // Magenta
 	square->addChild(largeTriangle1);
 
-    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
+    /*ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
                                 I,
                                 glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cyan
@@ -167,12 +189,17 @@ void MyApp::createScenegraph() {
                                 createShaderPrograms(Meshes.at("Parallelogram").get()), 
                                 I, 
 		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
-	largeTriangle1->addChild(parallelogram);
+	largeTriangle1->addChild(parallelogram);*/
 }
 
 
 ////////////////////////////////////////////////////////////////////////// SCENE
 
+void MyApp::drawScene() {
+    Root->draw();
+}
+
+////////////////////////////////////////////////////////////////////// CAMERA
 
 
 // Eye(0,0,25) Center(0,0,0) Up(0,1,0)
@@ -212,10 +239,6 @@ void MyApp::createCamera() {
     Camera->setProjectionMatrix(Cameras[currentCamera].PerspectiveMatrix);
 }
 
-void MyApp::drawScene() {
-    Root->draw();
-}
-
 void MyApp::updateCamera() {
     // Projection matrix update
     if (Cameras[currentCamera].isPerspective) {
@@ -239,12 +262,12 @@ void MyApp::updateCamera() {
 }
 
 
-
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
 void MyApp::initCallback(GLFWwindow* win) {
     createMeshes();
     createCamera();
+	transformations();
     createScenegraph();
 }
 
