@@ -130,6 +130,7 @@ void MyApp::transformations() {
 	const float side_length = glm::sqrt(glm::pow(hypotenuse, 2) * 2) / 2;
     const float centroid = side_length / 3;
 	const float centroid_diagonal = glm::sqrt(glm::pow(centroid, 2) * 2);
+	const float height = side_length * glm::sin(glm::radians(45.0f));
 
 	// Square
     const float square_side = side_length / 2;
@@ -137,6 +138,46 @@ void MyApp::transformations() {
 
 	Transforms.insert({ "Square_Start", glm::translate(I, glm::vec3(square_diagonal / 2, 0.0f, 0.0f)) });
     Transforms.insert({ "BigTriangle1_Start", glm::translate(I, glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f)) });
+
+	// Tall Small Triangle
+    const float tall_small_hypotenuse = square_diagonal;
+    const float tall_small_side = square_side;
+	const float tall_small_centroid = tall_small_side / 3;
+	const float tall_small_centroid_diagonal = glm::sqrt(glm::pow(tall_small_centroid, 2) * 2);
+
+	Transforms.insert({ "TallSmallTriangle_Start", glm::translate(I, glm::vec3(centroid_diagonal, 0.0f, tall_small_centroid_diagonal)) });
+
+	// Big Triangle 2
+	const float large_triangle2_centroid_diagonal = centroid_diagonal;
+
+	Transforms.insert({ "BigTriangle2_Start", glm::translate(I, glm::vec3(-(square_diagonal / 2), 0.0f, -large_triangle2_centroid_diagonal)) 
+                                            * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
+
+	// Medium Triangle
+	const float medium_side = 89.0f * global_scale / 2;
+	const float medium_centroid = medium_side / 3;
+
+	Transforms.insert({ "MediumTriangle_Start", glm::translate(I, glm::vec3(square_diagonal / 2 - medium_centroid, 0.0f, medium_side -  medium_centroid)) });
+
+	// Short Small Triangle
+	const float short_small_hypotenuse = medium_side;
+    const float short_small_side = square_side;
+	const float short_small_centroid = short_small_side / 3;
+	const float short_small_centroid_diagonal = glm::sqrt(glm::pow(short_small_centroid, 2) * 2);
+	const float short_small_height = short_small_side * glm::sin(glm::radians(45.0f));
+
+	Transforms.insert({ "ShortSmallTriangle_Start", glm::translate(I, glm::vec3(medium_centroid - (short_small_height - short_small_centroid_diagonal), 0.0f, 
+                                                                                -(medium_side + (short_small_hypotenuse / 2 - medium_centroid))))});
+
+	// Parallelogram
+	const float parallelogram_side = side_length / 2;
+    const float parallelogram_base = 89.0f * global_scale / 2;
+	const float parallelogram_height = parallelogram_side * glm::sin(glm::radians(45.0f));
+    const float parallelogram_centroid_x = (parallelogram_base + parallelogram_side * glm::sin(glm::radians(45.0f))) / 2;
+    
+
+	Transforms.insert({ "Parallelogram_Start", glm::translate(I, glm::vec3(parallelogram_centroid_x - (height - centroid_diagonal), 0.0f, 
+                                                                            hypotenuse / 2 - parallelogram_height / 2))});
 
 }
 
@@ -161,35 +202,35 @@ void MyApp::createScenegraph() {
 		                        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f)); // Magenta
 	square->addChild(largeTriangle1);
 
-    /*ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
+    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
-                                I,
+		                        Transforms.at("TallSmallTriangle_Start"),
                                 glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cyan
 	largeTriangle1->addChild(tallSmallTriangle);
 
     ScenegraphNode* largeTriangle2 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()),
-                                I * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))),
+                                Transforms.at("BigTriangle2_Start"),
                                 glm::vec4(0.3f, 0.6f, 1.0f, 1.0f)); // Light Blue
 	square->addChild(largeTriangle2);
 
     ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
                                 createShaderPrograms(Meshes.at("MediumTriangle").get()),
-                                I,
+		                        Transforms.at("MediumTriangle_Start"),
                                 glm::vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Purple
 	square->addChild(mediumTriangle);
 
     ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
-                                I,
+		                        Transforms.at("ShortSmallTriangle_Start"),
                                 glm::vec4(0.5f, 0.0f, 0.0f, 1.0f)); // Red
 	mediumTriangle->addChild(shortSmallTriangle);
 
-	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(), 
+	ScenegraphNode* parallelogram = new ScenegraphNode(Meshes.at("Parallelogram").get(),
                                 createShaderPrograms(Meshes.at("Parallelogram").get()), 
-                                I, 
+		                        Transforms.at("Parallelogram_Start"),
 		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
-	largeTriangle1->addChild(parallelogram);*/
+	largeTriangle1->addChild(parallelogram);
 }
 
 
@@ -267,7 +308,7 @@ void MyApp::updateCamera() {
 void MyApp::initCallback(GLFWwindow* win) {
     createMeshes();
     createCamera();
-	transformations();
+    transformations();
     createScenegraph();
 }
 
