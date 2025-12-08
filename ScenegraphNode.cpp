@@ -1,5 +1,27 @@
 #include "ScenegraphNode.h"
 
+
+static glm::mat4 interpolateTRS(TransformTRS& a, TransformTRS& b, float t) {
+	glm::vec3 pos = glm::mix(a.position, b.position, t);
+	glm::vec3 scale = glm::mix(a.scale, b.scale, t);
+	glm::quat rot = glm::slerp(a.rotation, b.rotation, t);
+
+	return glm::translate(glm::mat4(1.0f), pos)
+		* glm::mat4_cast(rot)
+		* glm::scale(glm::mat4(1.0f), scale);
+}
+
+ScenegraphNode::ScenegraphNode(mgl::Mesh* mesh, mgl::ShaderProgram* shaders, TransformTRS transformTRS, glm::vec4 color) {
+	Mesh = mesh;
+	Shaders = shaders;
+	localTransform = glm::translate(glm::mat4(1.0f), transformTRS.position)
+					* glm::mat4_cast(transformTRS.rotation)
+					* glm::scale(glm::mat4(1.0f), transformTRS.scale);
+	this->color = color;
+	start = transformTRS;
+	end = transformTRS;
+}
+
 void ScenegraphNode::addChild(ScenegraphNode* child) {
 	this->children.push_back(std::unique_ptr<ScenegraphNode>(child));
 	child->parent = this;
@@ -40,4 +62,16 @@ void ScenegraphNode::setRotation(float angle, const glm::vec3& axis) {
 
 void ScenegraphNode::setScale(const glm::vec3& scale) {
 	localTransform = glm::scale(glm::mat4(1.0f), scale) * localTransform;
+}
+
+void ScenegraphNode::setAnimation(TransformTRS start, TransformTRS end) {
+	this->start = start;
+	this->end = end;
+}
+
+void ScenegraphNode::updateAnimation(float t) {
+	localTransform = interpolateTRS(start, end, t);
+	for (auto& child : children) {
+		child->updateAnimation(t);
+	}
 }

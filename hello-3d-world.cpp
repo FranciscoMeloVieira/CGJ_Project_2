@@ -48,7 +48,7 @@ private:
     GLint ModelMatrixId, ColorId;
     std::unordered_map<std::string, std::shared_ptr<mgl::Mesh>> Meshes;
     ScenegraphNode* Root = nullptr;
-	std::unordered_map<std::string, glm::mat4> Transforms;
+	std::unordered_map<std::string, TransformTRS> Transforms;
 
     bool keys[1024]{ false };
     bool rightMouseDown = false;
@@ -58,9 +58,12 @@ private:
     double lastMouseY = 0.0f;
     float mouseSensitivity = 0.1f;
 
-
     float yawSpeed = 1.0f;
     float pitchSpeed = 1.0f;
+
+    float animationT = 0.0f;
+    float animationSpeed = 0.75f;
+    int animationDirection = 0; // -1 backward, +1 forward
 
     void createMeshes();
     mgl::ShaderProgram* createShaderPrograms(mgl::Mesh* Mesh);
@@ -69,6 +72,7 @@ private:
     void updateCamera();
     void createScenegraph();
     void transformations();
+    void processInput();
 };
 
 ////////////////////////////////////////////////////////////////// VAO, VBO, EBO
@@ -125,6 +129,10 @@ const float global_scale = 0.1f;
 
 void MyApp::transformations() {
 
+    // Pickagram Root
+    Transforms.insert({ "PickagramRoot_Start", TransformTRS() });
+    Transforms.insert({ "PickagramRoot_End" , TransformTRS(glm::vec3(0.0f, 10.0f, 0.0f)) });
+
 	// Big Triangle 1
 	const float hypotenuse = 89.0f * global_scale;
 	const float side_length = glm::sqrt(glm::pow(hypotenuse, 2) * 2) / 2;
@@ -136,28 +144,29 @@ void MyApp::transformations() {
     const float square_side = side_length / 2;
 	const float square_diagonal = glm::sqrt(2 * glm::pow(square_side, 2));
 
-	Transforms.insert({ "Square_Start", glm::translate(I, glm::vec3(square_diagonal / 2, 0.0f, 0.0f)) });
-    Transforms.insert({ "BigTriangle1_Start", glm::translate(I, glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f)) });
+    Transforms.insert({ "Square_Start", TransformTRS(glm::vec3(square_diagonal / 2, 0.0f, 0.0f))});
+    Transforms.insert({ "BigTriangle1_Start", TransformTRS(glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f))});
 
+    
 	// Tall Small Triangle
     const float tall_small_hypotenuse = square_diagonal;
     const float tall_small_side = square_side;
 	const float tall_small_centroid = tall_small_side / 3;
 	const float tall_small_centroid_diagonal = glm::sqrt(glm::pow(tall_small_centroid, 2) * 2);
 
-	Transforms.insert({ "TallSmallTriangle_Start", glm::translate(I, glm::vec3(centroid_diagonal, 0.0f, tall_small_centroid_diagonal)) });
+    Transforms.insert({ "TallSmallTriangle_Start", TransformTRS(glm::vec3(centroid_diagonal, 0.0f, tall_small_centroid_diagonal))});
 
 	// Big Triangle 2
 	const float large_triangle2_centroid_diagonal = centroid_diagonal;
 
-	Transforms.insert({ "BigTriangle2_Start", glm::translate(I, glm::vec3(-(square_diagonal / 2), 0.0f, -large_triangle2_centroid_diagonal)) 
-                                            * glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
+    Transforms.insert({ "BigTriangle2_Start", TransformTRS(glm::vec3(-(square_diagonal / 2), 0.0f, -large_triangle2_centroid_diagonal),
+                                                (glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))))});
 
 	// Medium Triangle
 	const float medium_side = 89.0f * global_scale / 2;
 	const float medium_centroid = medium_side / 3;
 
-	Transforms.insert({ "MediumTriangle_Start", glm::translate(I, glm::vec3(square_diagonal / 2 - medium_centroid, 0.0f, medium_side -  medium_centroid)) });
+    Transforms.insert({ "MediumTriangle_Start", TransformTRS(glm::vec3(square_diagonal / 2 - medium_centroid, 0.0f, medium_side - medium_centroid))});
 
 	// Short Small Triangle
 	const float short_small_hypotenuse = medium_side;
@@ -166,8 +175,8 @@ void MyApp::transformations() {
 	const float short_small_centroid_diagonal = glm::sqrt(glm::pow(short_small_centroid, 2) * 2);
 	const float short_small_height = short_small_side * glm::sin(glm::radians(45.0f));
 
-	Transforms.insert({ "ShortSmallTriangle_Start", glm::translate(I, glm::vec3(medium_centroid - (short_small_height - short_small_centroid_diagonal), 0.0f, 
-                                                                                -(medium_side + (short_small_hypotenuse / 2 - medium_centroid))))});
+    Transforms.insert({ "ShortSmallTriangle_Start", TransformTRS(glm::vec3(medium_centroid - (short_small_height - short_small_centroid_diagonal), 0.0f,
+                                                                                -(medium_side + (short_small_hypotenuse / 2 - medium_centroid)))) });
 
 	// Parallelogram
 	const float parallelogram_side = side_length / 2;
@@ -176,11 +185,10 @@ void MyApp::transformations() {
     const float parallelogram_centroid_x = (parallelogram_base + parallelogram_side * glm::sin(glm::radians(45.0f))) / 2;
     
 
-	Transforms.insert({ "Parallelogram_Start", glm::translate(I, glm::vec3(parallelogram_centroid_x - (height - centroid_diagonal), 0.0f, 
+    Transforms.insert({ "Parallelogram_Start", TransformTRS(glm::vec3(parallelogram_centroid_x - (height - centroid_diagonal), 0.0f,
                                                                             hypotenuse / 2 - parallelogram_height / 2))});
 
 }
-
 
 void MyApp::createScenegraph() {
 
@@ -188,6 +196,7 @@ void MyApp::createScenegraph() {
 
 	// Pickagram
 	ScenegraphNode* pickagramRoot = new ScenegraphNode();
+    pickagramRoot->setAnimation(Transforms.at("PickagramRoot_Start"), Transforms.at("PickagramRoot_End"));
 	Root->addChild(pickagramRoot);
 
     ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(),
@@ -302,6 +311,15 @@ void MyApp::updateCamera() {
     drawScene();
 }
 
+void MyApp::processInput() {
+    if (keys[GLFW_KEY_RIGHT] && !keys[GLFW_KEY_LEFT])
+        animationDirection = +1;
+    else if (keys[GLFW_KEY_LEFT] && !keys[GLFW_KEY_RIGHT])
+        animationDirection = -1;
+    else
+        animationDirection = 0;
+}
+
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
@@ -323,6 +341,12 @@ void MyApp::windowSizeCallback(GLFWwindow* win, int winx, int winy) {
 }
 
 void MyApp::displayCallback(GLFWwindow* win, double elapsed) {
+    animationT += animationDirection * animationSpeed * elapsed;
+
+    animationT = glm::clamp(animationT, 0.0f, 1.0f);
+
+    Root->updateAnimation(animationT);
+	processInput();
     drawScene();
 }
 
