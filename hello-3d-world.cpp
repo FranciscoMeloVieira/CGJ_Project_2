@@ -130,8 +130,6 @@ const float global_scale = 0.1f;
 void MyApp::transformations() {
 
     // Pickagram Root
-    Transforms.insert({ "PickagramRoot_Start", TransformTRS() });
-    Transforms.insert({ "PickagramRoot_End" , TransformTRS(glm::vec3(0.0f, 10.0f, 0.0f)) });
 
 	// Big Triangle 1
 	const float hypotenuse = 89.0f * global_scale;
@@ -144,8 +142,12 @@ void MyApp::transformations() {
     const float square_side = side_length / 2;
 	const float square_diagonal = glm::sqrt(2 * glm::pow(square_side, 2));
 
-    Transforms.insert({ "Square_Start", TransformTRS(glm::vec3(square_diagonal / 2, 0.0f, 0.0f))});
-    Transforms.insert({ "BigTriangle1_Start", TransformTRS(glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f))});
+	Transforms.insert({ "Square_Translation_End", TransformTRS(glm::vec3(0.0f, 0.0f, 0.0f)) });
+	Transforms.insert({ "Square_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
+
+    Transforms.insert({ "BigTriangle1_Translation_Start", TransformTRS(glm::vec3(-(centroid_diagonal + square_diagonal / 2), 0.0f, 0.0f))});
+    Transforms.insert({ "BigTriangle1_Translation_End", TransformTRS(glm::vec3(-(square_diagonal / 2 - centroid), 0.0f, (side_length - centroid))) });
+    Transforms.insert({ "BigTriangle1_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(-135.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
     
 	// Tall Small Triangle
@@ -153,14 +155,23 @@ void MyApp::transformations() {
     const float tall_small_side = square_side;
 	const float tall_small_centroid = tall_small_side / 3;
 	const float tall_small_centroid_diagonal = glm::sqrt(glm::pow(tall_small_centroid, 2) * 2);
+	const float tall_small_height = tall_small_side * glm::sin(glm::radians(45.0f));
 
-    Transforms.insert({ "TallSmallTriangle_Start", TransformTRS(glm::vec3(centroid_diagonal, 0.0f, tall_small_centroid_diagonal))});
+    Transforms.insert({ "TallSmallTriangle_Translation_Start", TransformTRS(glm::vec3(centroid_diagonal, 0.0f, tall_small_centroid_diagonal))});
+    Transforms.insert({ "TallSmallTriangle_Translation_End", TransformTRS(glm::vec3(-(centroid - (tall_small_height - tall_small_centroid_diagonal)), 0.0f, 
+                                                                                    -(side_length + tall_small_hypotenuse / 2 - centroid)))});
+    Transforms.insert({ "TallSmallTriangle_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)))});
 
 	// Big Triangle 2
 	const float large_triangle2_centroid_diagonal = centroid_diagonal;
+	const float large_triangle2_hypotenuse = hypotenuse;
+	const float large_triangle2_height = height;
 
-    Transforms.insert({ "BigTriangle2_Start", TransformTRS(glm::vec3(-(square_diagonal / 2), 0.0f, -large_triangle2_centroid_diagonal),
-                                                (glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))))});
+	Transforms.insert({ "BigTriangle2_Translation_Start", TransformTRS(glm::vec3(-(square_diagonal / 2), 0.0f, -large_triangle2_centroid_diagonal)) });
+    Transforms.insert({ "BigTriangle2_Translation_End", TransformTRS(glm::vec3(large_triangle2_hypotenuse / 2, 0.0f,
+                                                                               square_diagonal / 2 - (large_triangle2_height - large_triangle2_centroid_diagonal))) });
+    Transforms.insert({ "BigTriangle2_Rotation_Start", TransformTRS(glm::angleAxis(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
+	Transforms.insert({ "BigTriangle2_Rotation_End", TransformTRS(glm::angleAxis(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))) });
 
 	// Medium Triangle
 	const float medium_side = 89.0f * global_scale / 2;
@@ -196,38 +207,73 @@ void MyApp::createScenegraph() {
 
 	// Pickagram
 	ScenegraphNode* pickagramRoot = new ScenegraphNode();
-    pickagramRoot->setAnimation(Transforms.at("PickagramRoot_Start"), Transforms.at("PickagramRoot_End"));
 	Root->addChild(pickagramRoot);
 
-    ScenegraphNode* square = new ScenegraphNode(Meshes.at("Square").get(),
+
+	// Square
+	ScenegraphNode* square_translate = new ScenegraphNode();
+	Root->addChild(square_translate);
+    square_translate->setAnimation(TransformTRS(),
+		                            Transforms.at("Square_Translation_End"));
+
+    ScenegraphNode* square_rotate = new ScenegraphNode(Meshes.at("Square").get(),
                                 createShaderPrograms(Meshes.at("Square").get()),
-                                Transforms.at("Square_Start"),
+                                TransformTRS(),
 		                        glm::vec4(0.0f, 0.7f, 0.0f, 1.0f)); // Green
-	pickagramRoot->addChild(square);
+	square_translate->addChild(square_rotate);
+    square_rotate->setAnimation(TransformTRS(),
+		                        Transforms.at("Square_Rotation_End"));
 
-    ScenegraphNode* largeTriangle1 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
+
+	// Large Triangle 1
+	ScenegraphNode* largeTriangle1_translate = new ScenegraphNode();
+	largeTriangle1_translate->setAnimation(Transforms.at("BigTriangle1_Translation_Start"), 
+		                                   Transforms.at("BigTriangle1_Translation_End"));
+	square_translate->addChild(largeTriangle1_translate);
+
+    ScenegraphNode* largeTriangle1_rotate = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()), 
-                                Transforms.at("BigTriangle1_Start"),
+                                TransformTRS(),
 		                        glm::vec4(0.85f, 0.0f, 0.85f, 1.0f)); // Magenta
-	square->addChild(largeTriangle1);
+    largeTriangle1_rotate->setAnimation(TransformTRS(),
+		                                Transforms.at("BigTriangle1_Rotation_End"));
+    largeTriangle1_translate->addChild(largeTriangle1_rotate);
 
-    ScenegraphNode* tallSmallTriangle = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
+	// Tall Small Triangle
+	ScenegraphNode* tallSmallTriangle_translate = new ScenegraphNode();
+    tallSmallTriangle_translate->setAnimation(Transforms.at("TallSmallTriangle_Translation_Start"),
+		                                      Transforms.at("TallSmallTriangle_Translation_End"));
+
+	largeTriangle1_translate->addChild(tallSmallTriangle_translate);
+
+    ScenegraphNode* tallSmallTriangle_rotate = new ScenegraphNode(Meshes.at("TallSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("TallSmallTriangle").get()),
-		                        Transforms.at("TallSmallTriangle_Start"),
+		                        TransformTRS(),
                                 glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)); // Cyan
-	largeTriangle1->addChild(tallSmallTriangle);
+	tallSmallTriangle_rotate->setAnimation(TransformTRS(),
+		                            Transforms.at("TallSmallTriangle_Rotation_End"));
+	tallSmallTriangle_translate->addChild(tallSmallTriangle_rotate);
 
-    ScenegraphNode* largeTriangle2 = new ScenegraphNode(Meshes.at("BigTriangle").get(),
+	// Large Triangle 2
+	ScenegraphNode* largeTriangle2_translate = new ScenegraphNode();
+    largeTriangle2_translate->setAnimation(Transforms.at("BigTriangle2_Translation_Start"),
+		                                   Transforms.at("BigTriangle2_Translation_End"));
+
+	square_translate->addChild(largeTriangle2_translate);
+
+    ScenegraphNode* largeTriangle2_rotate = new ScenegraphNode(Meshes.at("BigTriangle").get(),
                                 createShaderPrograms(Meshes.at("BigTriangle").get()),
-                                Transforms.at("BigTriangle2_Start"),
+                                Transforms.at("BigTriangle2_Rotation_Start"),
                                 glm::vec4(0.3f, 0.6f, 1.0f, 1.0f)); // Light Blue
-	square->addChild(largeTriangle2);
+    largeTriangle2_rotate->setAnimation(Transforms.at("BigTriangle2_Rotation_Start"),
+		                                Transforms.at("BigTriangle2_Rotation_End"));
+    largeTriangle2_translate->addChild(largeTriangle2_rotate);
 
-    ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
+    /*ScenegraphNode* mediumTriangle = new ScenegraphNode(Meshes.at("MediumTriangle").get(),
                                 createShaderPrograms(Meshes.at("MediumTriangle").get()),
 		                        Transforms.at("MediumTriangle_Start"),
                                 glm::vec4(0.5f, 0.0f, 0.5f, 1.0f)); // Purple
-	square->addChild(mediumTriangle);
+    square_translate->addChild(mediumTriangle);
 
     ScenegraphNode* shortSmallTriangle = new ScenegraphNode(Meshes.at("ShortSmallTriangle").get(),
                                 createShaderPrograms(Meshes.at("ShortSmallTriangle").get()),
@@ -239,7 +285,7 @@ void MyApp::createScenegraph() {
                                 createShaderPrograms(Meshes.at("Parallelogram").get()), 
 		                        Transforms.at("Parallelogram_Start"),
 		                        glm::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange   
-	largeTriangle1->addChild(parallelogram);
+	largeTriangle1->addChild(parallelogram);*/
 }
 
 

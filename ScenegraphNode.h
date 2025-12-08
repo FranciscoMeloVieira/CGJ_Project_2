@@ -12,8 +12,8 @@ typedef struct TransformTRS {
 		: position(position), rotation(rotation), scale(scale) {}
 	TransformTRS (const glm::vec3& position)
 		: position(position) {}
-	TransformTRS (const glm::vec3& position, const glm::quat& rotation)
-		: position(position), rotation(rotation) {}
+	TransformTRS (const glm::quat& rotation)
+		: rotation(rotation) {}
 	TransformTRS() = default;
 } TransformTRS;
 
